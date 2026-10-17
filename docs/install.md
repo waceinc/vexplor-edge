@@ -103,5 +103,10 @@ Linux: `sudo systemctl disable --now vexplor-edge && sudo rm -r /opt/vexplor-edg
 
 ## 7. What was checked
 
-The Linux package was installed with this guide on a fresh Ubuntu 24.04 (x86_64) and registered, approved and sent
-values from an OPC UA server over the network. Windows will be covered later.
+- **One click (2026-10-18, 1.0.0)** — the exact command the server screen makes was run in clean Ubuntu 24.04
+  containers (arm64 and x86_64): release download → `SHA256SUMS` check → install → pre-approved registration → reading
+  an OPC UA virtual PLC → values stored on the server (21 values on arm64, 70 on x86_64, machine connection OK). The
+  containers have no systemd, so it ran with `--no-service`.
+- **Service (earlier version — the same installer, AAS Studio 2.4 time)** — installed on a clean Ubuntu 24.04 (x86_64)
+  machine as a systemd service, registered, approved and sent values from an OPC UA server over the network.
+- Windows is in preparation.
