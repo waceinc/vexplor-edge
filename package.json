@@ -7,12 +7,24 @@
   "private": true,
   "type": "module",
   "homepage": "https://github.com/waceinc/vexplor-edge",
-  "repository": { "type": "git", "url": "https://github.com/waceinc/vexplor-edge.git" },
-  "engines": { "node": ">=22" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waceinc/vexplor-edge.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": { "vexplor-edge": "./dist/bin.js" },
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "bin": {
+    "vexplor-edge": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
@@ -33,5 +45,8 @@
     "rolldown": "1.2.5",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "node-opcua": "2.178.0"
   }
 }
