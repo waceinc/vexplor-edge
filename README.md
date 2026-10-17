@@ -1,49 +1,89 @@
-# @aas/edge — VEXPLOR remote collector
+**English** · [한국어](README.ko.md)
 
-The program that runs inside the factory: it reads PLCs and controllers named by an **approved read list** and sends
-signed batches out over HTTPS (contract: [`docs/edge-contract.md`](../../docs/edge-contract.md)). One program serves
-both AAS Studio and VEXPLOR Logic Studio Cloud.
+# VEXPLOR Edge
+
+**The remote collector you put on one factory PC. It reads only the machine values a person approved and sends them
+out over HTTPS — outbound only.** Nothing connects into the factory, there is no remote stop, and it never writes to a
+PLC.
+
+![The "Remote collectors" screen of VEXPLOR AAS Studio — one command line and the connected collectors](docs/images/connect-en.png)
+
+## One-click connect
+
+Start on the server — VEXPLOR AAS Studio 2.7.0 or later — under **Settings → Remote collectors**.
+
+1. **"+ Connect a collector"** — check the server address and the list it will read (machines, tags), then press
+   "Make the connect command". With "Approve this list so it reads at once" ticked, that press is the approval too.
+2. **Paste the one line it shows into a terminal on the factory Linux PC.**
+
+   ```bash
+   curl -fsSL https://github.com/waceinc/vexplor-edge/releases/latest/download/get.sh | sudo sh -s -- --server https://aas.example.com --code 7KQ4-M2XD-9PRT
+   ```
+
+   It downloads the package for the PC's CPU, checks it against the release's `SHA256SUMS`, then installs, registers
+   and starts the service in one go.
+3. **Done when the screen shows "Receiving".** Values appear by themselves in "Collect" for that machine file.
+
+The code works once, for 24 hours. The screen waits for the factory PC and shows its name the moment it connects. The
+same screen then shows the last batch, the values received and the machine connections, and pauses, resumes or revokes.
+
+## When to use it
+
+| Where the server is | What reads the machines |
+|---|---|
+| On the machines' network (a server in the factory) | The collector inside the AAS Studio server — you do not need this program |
+| Outside the factory (cloud, head office) | **VEXPLOR Edge** — one factory PC reads and sends out |
+
+Any server that follows the contract `vexplor.edge/1` receives it. VEXPLOR AAS Studio does today; VEXPLOR Logic Studio
+Cloud receives the same contract too (opened to design-partner companies first, in order).
+
+## What it does — and does not
+
+| | |
+|---|---|
+| **Read only** | No code writes to a PLC or controller. It reads with the same code as the AAS Studio server's collector (OPC UA, Modbus TCP, MQTT) |
+| **Outbound only** | It goes out to the server address on 443 (or the site proxy) and nowhere else. It opens no port; there is no way in |
+| **Approved list only** | It reads only the tags in the list a person approved on the server. A changed list waits for a new approval |
+| **Every request signed** | On registering it makes an Ed25519 key on the PC and signs every request. The private key never leaves the PC |
+| **Nothing lost on an outage** | Batches wait on disk and go out in order when the server answers again (30 days by default); each is stored once |
+| **Send changes only (optional)** | OPC UA subscriptions with a deadband. 6 tags, 1 s, 5 minutes measured: 283 KB → 88 KB |
+| **No remote stop** | The server sends no commands. A revoked device stops sending by itself and keeps its queue |
+| **No auto-install** | It can report a newer signed release; a person downloads and installs it |
+
+## Install
+
+- **One click** — the line above (the screen fills in the server and the code).
+- **By hand** — from [Releases](https://github.com/waceinc/vexplor-edge/releases) take
+  `vexplor-edge-<version>-linux-x64.tar.gz` (or `linux-arm64`) and `SHA256SUMS`, check them, then
+  `sudo ./install.sh --server … --code …`.
+
+Supported: **Linux x64 · arm64** (systemd). Windows is in preparation. Full guide: [docs/install.md](docs/install.md)
+
+## Documents
+
+- [Install and run](docs/install.md) — layouts (DMZ, equipment network), every destination it connects to, passwords
+  and certificates, removal
+- [Contract `vexplor.edge/1`](docs/contract.md) — register, read list, batches, signing, errors. JSON Schema in
+  [`docs/schemas/`](docs/schemas/)
+
+## Development
 
 ```bash
-vexplor-edge register --config edge.json --code 7KQ4-M2XD-9PRT   # once, with the code a person made on the server
-vexplor-edge run --config edge.json                              # what the service runs
+npm ci && npm run build && npm test          # unit tests
+git clone https://github.com/waceinc/vexplor-aas ../vexplor-aas && (cd ../vexplor-aas && npm ci && npx tsc -b)
+npm run test:interop                         # against a real AAS Studio server (AAS_DIR sets where)
+npm run pack:release                         # Linux x64 · arm64 packages + get.sh + SHA256SUMS
 ```
 
-`edge.json`:
+The equipment readers come from VEXPLOR AAS Studio's release libraries (`@aas/collector`, `@aas/fieldbus`,
+`@aas/opcua`), installed by release URL. How to release a version: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-```json
-{
-  "server": "https://aas.example.com",
-  "stateDir": "/var/lib/vexplor-edge",
-  "proxy": "http://proxy.plant.local:3128",
-  "credentialsFile": "credentials.json",
-  "opcua": { "trustFirstUse": false }
-}
-```
+## Versions
 
-- **Read only, outbound only.** It never writes to a device, listens on no port and has no remote stop. A revoked
-  device stops sending by itself and keeps its queue.
-- **Nothing lost on an outage.** Batches wait on disk (`stateDir/queue`) and go out in order with the same boot id and
-  sequence when the server answers again; the server stores each once. One batch is in flight at a time, so a backlog
-  always arrives before newer batches. A batch waits at most `maxQueueDays` (default 30) — older ones, like those past
-  `maxQueuedBatches`, are dropped and counted in `status.droppedBatches`.
-- **Secrets stay here.** The private key is made on this machine; PLC passwords live in `credentialsFile` by endpoint,
-  never in the AAS or the read list.
-- **Batches stay few during an outage.** One batch every `flushIntervalMs` (default 5 s — 12 requests a minute, well
-  under the server's 60) while sending works; while it is paused, at most one a minute or when a batch is full, so a long
-  outage leaves a backlog the server takes in minutes.
-- **A stop loses nothing either.** Samples read but not yet batched go to the queue on SIGINT/SIGTERM and are sent by
-  the next start.
-- **Update notices, never installs.** With `"update": { "manifestUrl": "https://…/latest.json", "publicKey": "<release
-  key>" }` it checks once a day and reports a newer release signed by that key (log and the next batch's status). It
-  downloads and installs nothing — a person installs it with the installer. Without the setting it makes no update
-  request at all. A soak of a real 30-minute outage: `EDGE_SOAK_MINUTES=30 npx vitest run packages/edge/test/soak.test.ts`.
-- **Changes only (OPC UA)**: `"opcua": { "mode": "subscribe", "deadband": 0, "resendMs": 300000 }` — the PLC reports
-  changes, the deadband skips small changes of analog tags (never counters), an unchanged value is sent again every
-  `resendMs`. Default `"poll"`.
-- OPC UA security (mode, policy, user name) comes from the AID through the read list; the OPC UA certificate store is
-  `stateDir/opcua-pki` (an unknown server certificate waits in `rejected/` unless `trustFirstUse`).
+| VEXPLOR Edge | Contract | Servers |
+|---|---|---|
+| 1.0.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) |
 
-Tests (`packages/edge/test/agent.test.ts`) run it against a real AAS Studio and a real OPC UA server: every sample
-stored once, recovery after the server was gone, a CONNECT proxy with TLS end to end, STD-009 T9 (no connection but the
-proxy and the PLC) and T10 (no listening port, command, remote stop or built-in account in the code).
+## License
+
+[Apache License 2.0](LICENSE). The names and logos "VEXPLOR" and "WACE" are not covered by it ([NOTICE](NOTICE)).

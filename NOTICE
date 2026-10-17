@@ -1,0 +1,20 @@
+VEXPLOR Edge
+Copyright 2026 WACE
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Trademarks
+----------
+"VEXPLOR", "WACE" and the associated logos are trademarks of WACE.
+The Apache License does not grant permission to use these names or logos
+(see section 6 of the License). You may state that your work is based on
+VEXPLOR Edge, but you may not present a modified version under the same
+name or logo.
+
+Third-party material
+--------------------
+- The equipment readers come from VEXPLOR AAS Studio (github.com/waceinc/vexplor-aas,
+  Apache-2.0) as its release libraries @aas/core, @aas/collector, @aas/fieldbus
+  and @aas/opcua.
+- Each package lists the third-party software bundled into it, with licenses,
+  in THIRD-PARTY-NOTICES.txt and sbom.cdx.json.

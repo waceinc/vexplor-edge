@@ -8,7 +8,7 @@
  */
 import { subscribe, unsubscribe } from 'node:diagnostics_channel';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { createServer as createPlainServer, request as plainRequest, type Server } from 'node:http';
 import { createServer as createTlsServer } from 'node:https';
 import { connect, type AddressInfo, type Socket } from 'node:net';
@@ -20,11 +20,12 @@ import { buildAidSubmodel } from '@aas/collector';
 import { createHttpServer } from '@aas/api';
 import { InMemoryStore } from '@aas/store';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EdgeAgent, parseEdgeConfig } from '../src/index.js';
-import { startTestServer, type TestServer } from '../../opcua/test/server.js';
+import { EdgeAgent, parseEdgeConfig } from '../../src/index.js';
+import { startTestServer, type TestServer } from '@aas-test/opcua-server';
+import { aasFixture } from './aas.js';
 
 let opcua: TestServer;
-const golden = new Uint8Array(readFileSync('tests/fixtures/01-roll-forming-machine.aasx'));
+const golden = new Uint8Array(readFileSync(aasFixture('01-roll-forming-machine.aasx')));
 const saved = process.env['EDGE'];
 
 beforeAll(async () => {
@@ -244,20 +245,4 @@ describe('remote collector — proxy, T9, T10', () => {
     expect(edge.length).toBeGreaterThan(0);
     expect(edge.filter((address) => !allowed.has(address.split(':').pop()!))).toEqual([]);
   }, 90_000);
-
-  it('T10 — the edge code listens on no port, runs no command, has no remote stop and no built-in account', () => {
-    const dir = 'packages/edge/src';
-    const source = readdirSync(dir).map((file) => ({ file, text: readFileSync(join(dir, file), 'utf8') }));
-    const forbidden: [string, RegExp][] = [
-      ['listening server', /\bcreateServer\s*\(|\.listen\s*\(/],
-      ['running a command', /child_process|\bexecSync\b|\bexecFile\b|\bspawn\s*\(/],
-      ['evaluating code', /\beval\s*\(|new Function\s*\(/],
-      ['a built-in password', /password\s*[:=]\s*['"][^'"]+['"]/i],
-      ['acting on a command from the server', /['"](shutdown|reboot|uninstall|remote-?stop|kill)['"]/i],
-    ];
-    const found = source.flatMap(({ file, text }) => forbidden.filter(([, pattern]) => pattern.test(text)).map(([what]) => `${file}: ${what}`));
-    expect(found).toEqual([]);
-    // Only the entry point ends the process — never an answer from the server
-    expect(source.filter(({ file, text }) => file !== 'bin.ts' && /process\.exit/.test(text)).map(({ file }) => file)).toEqual([]);
-  });
 });

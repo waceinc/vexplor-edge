@@ -10,8 +10,8 @@
  */
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { hostname } from 'node:os';
 
-import { PRODUCT_VERSION } from '@aas/core';
 import type { ProtocolReader, ReadResult } from '@aas/collector';
 import type { SubscribeOptions, ValueSubscription } from '@aas/opcua';
 import type { EdgeConfig } from './config.js';
@@ -21,6 +21,7 @@ import { DiskQueue, type Batch } from './queue.js';
 import { intervalGroups, isAnalogType, openReader, readGroup, sampleOf, type ReadListInterface, type ReadListTag, type Sample } from './readers.js';
 import { Sender } from './sender.js';
 import { checkRelease, type ReleaseManifest } from './update.js';
+import { EDGE_VERSION } from './version.js';
 
 export interface AgentOptions {
   config: EdgeConfig;
@@ -50,7 +51,7 @@ const HEARTBEAT_MS = 60_000;
  */
 const PAUSED_BATCH_MS = 60_000;
 const UPDATE_CHECK_MS = 24 * 3600_000;
-const SOFTWARE = { name: 'vexplor-edge', version: PRODUCT_VERSION };
+const SOFTWARE = { name: 'vexplor-edge', version: EDGE_VERSION };
 
 export class EdgeAgent {
   readonly bootId = randomUUID();
@@ -102,13 +103,24 @@ export class EdgeAgent {
       schema: 'vexplor.edge.register/1',
       code,
       publicKey: this.identity.publicKey,
-      device: { name: this.options.config.name, software: SOFTWARE },
+      // The PC's name goes along, so a person can tell collectors apart on the server's screen
+      device: { name: this.options.config.name, hostname: hostname().slice(0, 200), software: SOFTWARE },
     });
     const body = answer.body as { deviceId?: string; registeredAt?: string; limits?: Identity['limits']; code?: string } | undefined;
     if (answer.status !== 201 || !body?.deviceId) throw new Error(`registration refused: ${answer.status} ${body?.code ?? ''}`.trim());
     this.identity = { ...this.identity, deviceId: body.deviceId, ...(body.registeredAt ? { registeredAt: body.registeredAt } : {}), ...(body.limits ? { limits: body.limits } : {}) };
     saveIdentity(this.options.config.stateDir, this.identity);
     return this.identity;
+  }
+
+  /** Whether the server lets this device read yet — asked once, right after registering, to say what comes next */
+  async approvalState(): Promise<ReadList['state'] | undefined> {
+    try {
+      const answer = await this.http.request(this.signer(), 'GET', '/edge/v1/read-list', undefined, {});
+      return answer.status === 200 ? (answer.body as ReadList).state : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   async start(): Promise<void> {

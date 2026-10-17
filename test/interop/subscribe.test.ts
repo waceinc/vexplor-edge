@@ -15,12 +15,13 @@ import { createHttpServer } from '@aas/api';
 import { buildAidSubmodel } from '@aas/collector';
 import { InMemoryStore } from '@aas/store';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EdgeAgent, parseEdgeConfig } from '../src/index.js';
-import { isAnalogType } from '../src/readers.js';
-import { startTestServer, type TestServer } from '../../opcua/test/server.js';
+import { EdgeAgent, parseEdgeConfig } from '../../src/index.js';
+import { isAnalogType } from '../../src/readers.js';
+import { startTestServer, type TestServer } from '@aas-test/opcua-server';
+import { aasFixture } from './aas.js';
 
 let opcua: TestServer;
-const golden = new Uint8Array(readFileSync('tests/fixtures/01-roll-forming-machine.aasx'));
+const golden = new Uint8Array(readFileSync(aasFixture('01-roll-forming-machine.aasx')));
 const saved = process.env['EDGE'];
 
 beforeAll(async () => {

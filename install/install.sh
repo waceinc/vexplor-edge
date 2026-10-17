@@ -1,5 +1,5 @@
 #!/bin/sh
-# VEXPLOR Edge — install on Linux with one command (docs/edge-install.md).
+# VEXPLOR Edge — install on Linux with one command (docs/install.md). get.sh downloads the package and runs this.
 #
 #   sudo ./install.sh --server https://aas.example.com --code 7KQ4-M2XD-9PRT [--proxy http://proxy:3128]
 #                     [--ca-file corp-ca.pem] [--credentials-file credentials.json] [--name "Line 1"] [--no-service]
@@ -9,7 +9,7 @@
 # It reads equipment only after a person approves the read list on the server.
 set -eu
 
-SERVER=""; CODE=""; PROXY=""; CA=""; CREDENTIALS=""; NAME="VEXPLOR Edge"; SERVICE=1
+SERVER=""; CODE=""; PROXY=""; CA=""; CREDENTIALS=""; NAME="$(hostname)"; SERVICE=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --server) SERVER="$2"; shift 2 ;;
@@ -56,4 +56,5 @@ if [ "$SERVICE" -eq 1 ]; then
 else
   echo "installed (no service): runuser -u vexplor-edge -- /opt/vexplor-edge/vexplor-edge run --config /etc/vexplor-edge/edge.json"
 fi
-echo "Next: approve this device's read list on the server — it reads nothing before that."
+echo "Done. Open the server's 「원격 수집기 (Remote collectors)」 screen: this PC shows as Receiving once values arrive."
+echo "If the list was not approved with the command, approve it there — it reads nothing before that."

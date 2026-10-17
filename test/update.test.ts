@@ -6,9 +6,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { PRODUCT_VERSION } from '@aas/core';
 import { describe, expect, it } from 'vitest';
-import { EdgeAgent, checkRelease, newer, parseEdgeConfig, releaseSigningBytes } from '../src/index.js';
+import { EDGE_VERSION, EdgeAgent, checkRelease, newer, parseEdgeConfig, releaseSigningBytes } from '../src/index.js';
 
 function releaseKey() {
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
@@ -23,15 +22,15 @@ function signed(fields: Record<string, unknown>, key: ReturnType<typeof releaseK
 describe('release manifest', () => {
   const key = releaseKey();
   it('reports a newer release signed by the release key', () => {
-    expect(checkRelease(signed({ version: '99.0.0' }, key.privateKey), key.publicKey, PRODUCT_VERSION)).toMatchObject({ state: 'available', release: { version: '99.0.0' } });
-    expect(checkRelease(signed({ version: '0.0.1' }, key.privateKey), key.publicKey, PRODUCT_VERSION)).toEqual({ state: 'current' });
+    expect(checkRelease(signed({ version: '99.0.0' }, key.privateKey), key.publicKey, EDGE_VERSION)).toMatchObject({ state: 'available', release: { version: '99.0.0' } });
+    expect(checkRelease(signed({ version: '0.0.1' }, key.privateKey), key.publicKey, EDGE_VERSION)).toEqual({ state: 'current' });
   });
 
   it('refuses a tampered manifest, another key and a plain-http file', () => {
     const tampered = { ...signed({ version: '99.0.0' }, key.privateKey), url: 'https://evil.example.com/x.msi' };
-    expect(checkRelease(tampered, key.publicKey, PRODUCT_VERSION).state).toBe('rejected');
-    expect(checkRelease(signed({ version: '99.0.0' }, releaseKey().privateKey), key.publicKey, PRODUCT_VERSION).state).toBe('rejected');
-    expect(checkRelease(signed({ version: '99.0.0', url: 'http://downloads.example.com/x.msi' }, key.privateKey), key.publicKey, PRODUCT_VERSION).state).toBe('rejected');
+    expect(checkRelease(tampered, key.publicKey, EDGE_VERSION).state).toBe('rejected');
+    expect(checkRelease(signed({ version: '99.0.0' }, releaseKey().privateKey), key.publicKey, EDGE_VERSION).state).toBe('rejected');
+    expect(checkRelease(signed({ version: '99.0.0', url: 'http://downloads.example.com/x.msi' }, key.privateKey), key.publicKey, EDGE_VERSION).state).toBe('rejected');
   });
 
   it('compares versions numerically', () => {

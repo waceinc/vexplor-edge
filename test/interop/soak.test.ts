@@ -16,8 +16,9 @@ import { buildAidSubmodel } from '@aas/collector';
 import { createHttpServer } from '@aas/api';
 import { InMemoryStore } from '@aas/store';
 import { describe, expect, it } from 'vitest';
-import { EdgeAgent, parseEdgeConfig } from '../src/index.js';
-import { startTestServer } from '../../opcua/test/server.js';
+import { EdgeAgent, parseEdgeConfig } from '../../src/index.js';
+import { startTestServer } from '@aas-test/opcua-server';
+import { aasFixture } from './aas.js';
 
 const minutes = Number(process.env['EDGE_SOAK_MINUTES'] ?? 0);
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -28,7 +29,7 @@ describe.skipIf(!(minutes > 0))('remote collector — outage soak', () => {
     process.env['EDGE'] = 'on';
     const opcua = await startTestServer(14960);
     const store = new InMemoryStore();
-    const pkg = readAasx(new Uint8Array(readFileSync('tests/fixtures/01-roll-forming-machine.aasx')));
+    const pkg = readAasx(new Uint8Array(readFileSync(aasFixture('01-roll-forming-machine.aasx'))));
     pkg.environment.submodels!.push(buildAidSubmodel({
       assetName: 'RollFormingMachine', iriBase: 'https://www.smart-factory.kr/ids', endpoint: opcua.endpoint,
       tags: [{ name: 'MotorSpeed', href: 'ns=1;s=Machine.MotorSpeed', type: 'float' }, { name: 'CycleCount', href: 'ns=1;s=Machine.CycleCount', type: 'integer' }],

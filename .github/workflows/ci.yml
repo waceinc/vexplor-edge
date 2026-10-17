@@ -1,0 +1,45 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - name: get.sh syntax
+        run: sh -n scripts/get.sh && sh -n install/install.sh
+
+  # The collector against a real VEXPLOR AAS Studio server, and the contract copy kept there
+  interop:
+    runs-on: ubuntu-latest
+    env:
+      AAS_DIR: ${{ github.workspace }}/vexplor-aas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: waceinc/vexplor-aas
+          path: vexplor-aas
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm ci && npx tsc -b
+        working-directory: vexplor-aas
+      - run: npm run test:interop
