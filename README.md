@@ -32,7 +32,13 @@ same screen then shows the last batch, the values received and the machine conne
 | Where the server is | What reads the machines |
 |---|---|
 | On the machines' network (a server in the factory) | The collector inside the AAS Studio server — you do not need this program |
-| Outside the factory (cloud, head office) | **VEXPLOR Edge** — one factory PC reads and sends out |
+| Outside the factory (cloud, head office) | **VEXPLOR Edge** — one factory PC reads and sends out. The server cannot reach the machines, so "Load from equipment" does not work |
+| Outside, connected to the factory network by VPN | The server reads them itself through the VPN — no need for this program |
+
+Whatever reads the machines has to be on their network. Pictures of the three cases and what works in each: [user guide §1-2](docs/usage.md#1-2-the-three-cases-in-pictures).
+
+What to collect — PLC addresses, register kinds, data types — is set in the collection link (AID) of the equipment file in
+AAS Studio, not on the factory PC. What is set where, and how values travel: [user guide §3](docs/usage.md#3-equipment-links-and-collection--what-is-set-where-and-how-values-are-read).
 
 Any server that follows the contract `vexplor.edge/1` receives it. VEXPLOR AAS Studio does today; VEXPLOR Logic Studio
 Cloud receives the same contract too (opened to design-partner companies first, in order).
@@ -61,9 +67,10 @@ Supported: **Linux x64 · arm64** (systemd). Windows is in preparation. Full gui
 
 ## Documents
 
-- **[User guide](docs/usage.md)** — from the first connection to approval, reading a collector's state, pause and
+- **[User guide](docs/usage.md)** — how equipment links and collection work (what is set where, OPC UA · Modbus TCP · MQTT
+  examples), from the first connection to approval, reading a collector's state, pause and
   revoke; the service, log and every configuration key on the factory PC; proxy, certificates, PLC passwords, sending
-  changes only, upgrading and troubleshooting, with screen captures (18 sections)
+  changes only, upgrading and troubleshooting, with screen captures (19 sections)
 - [Install and run](docs/install.md) — layouts (DMZ, equipment network), every destination it connects to, passwords
   and certificates, removal
 - [Contract `vexplor.edge/1`](docs/contract.md) — register, read list, batches, signing, errors. JSON Schema in
@@ -83,9 +90,10 @@ The equipment readers come from VEXPLOR AAS Studio's release libraries (`@aas/co
 
 ## Versions
 
-| VEXPLOR Edge | Contract | Servers |
-|---|---|---|
-| 1.0.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) |
+| VEXPLOR Edge | Contract | Servers | What changed |
+|---|---|---|---|
+| 1.0.1 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) | Reopens lost equipment connections by itself (a PLC or MQTT broker restarted, a PLC switched on late). Connection errors show on the status screen ([guide §3-9](docs/usage.md#3-9-things-to-know)) |
+| 1.0.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) | First release |
 
 ## License
 
