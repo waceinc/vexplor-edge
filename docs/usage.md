@@ -5,7 +5,7 @@
 VEXPLOR Edge is the remote collector you put on one factory PC. It reads only the machines on a list a person approved on
 the server, and sends their values out over HTTPS. This guide goes from the first connection through running, trouble
 shooting and removal, with the screens and commands in order. Screens are VEXPLOR AAS Studio 2.7.0, the collector is
-VEXPLOR Edge 1.0.0, and every capture was taken with a real server, real collectors and a simulated PLC (2026-10-18).
+VEXPLOR Edge 1.0.1, and every capture was taken with a real server, real collectors (1.0.0) and a simulated PLC (2026-10-18).
 
 ## Contents
 
@@ -38,20 +38,109 @@ When the AAS Studio server is on the same network as the machines, the collector
 itself. When the server is outside the factory (cloud, head office), it cannot reach them. Put VEXPLOR Edge on one factory
 PC and that PC reads the PLCs and sends the values to the server.
 
+### 1-1. One thing first — only what can reach the machines can read them
+
+Machines such as PLCs are usually connected only to the factory network (the range in which factory computers can reach one
+another). They cannot be reached from outside. So **the program that reads machine values has to be on the same network as
+the machines.**
+
+Where you put the AAS Studio server gives three cases.
+
+| Case | Server location | Who reads the machine values | VEXPLOR Edge |
+|---|---|---|---|
+| A | Inside the factory | The server, directly | Not needed |
+| B | Outside the factory (cloud · head office) | VEXPLOR Edge on a factory PC | **Needed** |
+| C | Outside, connected to the factory network by VPN | The server, directly through the VPN | Not required |
+
+### 1-2. The three cases in pictures
+
+**Case A — the server is inside the factory**
+
 ```mermaid
 flowchart LR
-  PLC["PLC · controller<br/>OPC UA · Modbus TCP · MQTT"] -- read only --> EDGE["Factory PC<br/>VEXPLOR Edge"]
-  EDGE -- "HTTPS 443 (outbound only)<br/>signed batches" --> SERVER["VEXPLOR AAS Studio server<br/>(cloud · head office)"]
-  PERSON["A person"] -- "approve · pause · revoke" --> SERVER
+  subgraph F["Factory network"]
+    PLC["Machine (PLC)"] -- "values" --> SRV["AAS Studio server"]
+    PC["Staff PC<br/>(browser)"] -- "uses the screens" --> SRV
+  end
 ```
 
-| Where the server is | What reads the machines |
-|---|---|
-| On the machine network (a server in the factory) | The collector inside AAS Studio — you do not need VEXPLOR Edge |
-| Outside the factory (cloud · head office) | **VEXPLOR Edge** — one factory PC reads and sends out |
+The server and the machines are on the same network, so the server reads the values itself. Every function on the screen
+works. VEXPLOR Edge is not used.
 
-What a collector reads is not decided on the factory PC (§3). The collection links (AID) in the equipment files (AASX) on the
-server make the "read list", and a person approves that list on the server before the collector reads anything.
+**Case B — the server is outside the factory (with VEXPLOR Edge)**
+
+```mermaid
+flowchart LR
+  subgraph F["Factory network"]
+    PLC["Machine (PLC)"] -- "reads values" --> EDGE["Factory PC<br/>VEXPLOR Edge"]
+  end
+  subgraph C["Outside the factory (cloud · head office)"]
+    SRV["AAS Studio server"]
+  end
+  EDGE -- "sends outward only<br/>(internet HTTPS)" --> SRV
+```
+
+The server cannot reach the machines inside the factory (there is no way in from outside). Put VEXPLOR Edge on one factory PC
+instead: that PC reads the machine values and sends them to the server. The factory only needs **a way out**; no way in from
+outside is opened.
+
+In this case **the functions in which the server connects to a machine itself do not work.**
+
+- "Load from equipment" (the button that lists a machine's tags so you can pick them) does not work. Type the tag addresses by hand,
+  or add several at once with a pattern. Look the addresses up in the PLC maker's tag list.
+- The "Collect" (read once now) button shows a connection failure. You do not need it: the values VEXPLOR Edge sends arrive by
+  themselves.
+
+If typing tags by hand is hard, run AAS Studio briefly on a laptop inside the factory **only while setting up**: create the
+collection link there with "Load from equipment", save the equipment file with "Download AASX", and upload it to the outside server
+with "Open AASX file".
+
+**Case C — the server is outside, but connected to the factory network by VPN**
+
+```mermaid
+flowchart LR
+  subgraph F["Factory network"]
+    PLC["Machine (PLC)"] --- VF["VPN device"]
+  end
+  subgraph C["Outside the factory (cloud · head office)"]
+    VC["VPN device"] --- SRV["AAS Studio server"]
+  end
+  VF <== "VPN tunnel" ==> VC
+```
+
+A VPN is a private tunnel between the factory network and the server's network. With it, the server can reach the machines
+inside the factory, so it reads them itself as in case A, and "Load from equipment" works too. VEXPLOR Edge is not required.
+
+Keep in mind:
+
+- **The VPN has to connect the server's network with the factory network** (a site-to-site VPN). A VPN that connects only one
+  staff laptop to the factory does not let the server reach the machines.
+- It opens a way from outside into the factory, so it often needs **approval from the company's security staff**, and the VPN
+  devices need looking after.
+- While the VPN is down the server cannot read, and values from that time are not kept. In case B, VEXPLOR Edge keeps values
+  on the factory PC while the link is down and sends them when it is back (§14).
+
+### 1-3. What works in each case
+
+| Task | A server inside | B server outside + VEXPLOR Edge | C server outside + VPN |
+|---|---|---|---|
+| Collecting machine values | Yes | Yes | Yes |
+| Picking tags with "Load from equipment" | Yes | **No** — type them, or upload a file made inside the factory | Yes |
+| Reading once now with "Collect" | Yes | **No** — values arrive by themselves | Yes |
+| Values while the internet · VPN is down | Not applicable | Kept on the factory PC and sent later | Not kept |
+| Opening a way into the factory | Not needed | Not needed | **Needed** (VPN) |
+| What goes in the factory | The server | One Linux PC | VPN device |
+
+### 1-4. Which case to choose
+
+- If the server can live inside the factory, **case A** is the simplest.
+- If the server is in the cloud or at head office and opening a way into the factory network is hard, choose **case B
+  (VEXPLOR Edge)**. The rest of this document describes case B.
+- If the factory and head office are already connected by VPN, **case C** also works: the server reads directly, without
+  VEXPLOR Edge.
+
+What the collector reads is not decided on the factory PC (§3). The collection links (AID) in the server's equipment
+files (AASX) become the "read list", and the collector starts reading only after a person approves that list on the server.
 
 ## 2. What you need
 
@@ -109,7 +198,7 @@ set where and how a value travels from the equipment to the server's screen, wit
 
 **There are no vendor-specific protocols.** Protocols such as LS XGT's FEnet are not read. Turn on the PLC's (or its
 communication module's) **Modbus TCP server** or **OPC UA server** and link to that. The server's read list can also
-carry HTTP equipment, but VEXPLOR Edge 1.0.0 reads only OPC UA, Modbus TCP and MQTT (HTTP equipment shows "Machine
+carry HTTP equipment, but VEXPLOR Edge 1.0.1 reads only OPC UA, Modbus TCP and MQTT (HTTP equipment shows "Machine
 connection error: HTTP is not read by this edge yet").
 
 ### 3-2. The whole trip — from the equipment file to the server's screen
@@ -198,6 +287,8 @@ taken from the message body like this:
 | JSON without `value`, such as `{"temp": 61.2}` | The whole body as text — refused by the server (`TypeMismatch`) when the data type is float or integer |
 
 ### 3-4. Equipment addresses are as seen from the factory PC — when the server is outside the factory
+
+What works and what does not for each server location is summed up first in [the pictures in §1-2](#1-2-the-three-cases-in-pictures) and the table in §1-3. This section is the detail for whoever installs.
 
 The collector connects to the read list's addresses **directly from the factory PC**. So the address in a collection link
 is the one the factory PC reaches, not one the server can see — usually the private address inside the factory, such
@@ -308,7 +399,7 @@ If the PLC manual lists the value as "40011", type `40011` in the address field 
 #10" button next to it to turn it into `10`. Measured in this repository's interop setup with AAS Studio's Modbus test
 device (2026-10-18).
 
-### 3-9. Things to know in 1.0.0
+### 3-9. Things to know
 
 - **From 1.0.1 a lost equipment connection comes back by itself.** If the PLC was off when the collector took the list,
   or a PLC or MQTT broker restarts while it reads, the collector does not need a restart. When opening fails, or three
@@ -670,7 +761,7 @@ The collector never downloads or installs anything by itself; a person upgrades 
 `/var/lib/vexplor-edge`, so replacing the program is enough — no new registration, no new approval:
 
 ```bash
-V=1.0.0    # the version to install
+V=1.0.1    # the version to install
 A=x64      # arm64 on an arm64 PC
 curl -fsSLO https://github.com/waceinc/vexplor-edge/releases/download/v$V/vexplor-edge-$V-linux-$A.tar.gz
 curl -fsSLO https://github.com/waceinc/vexplor-edge/releases/download/v$V/SHA256SUMS

@@ -32,7 +32,10 @@ same screen then shows the last batch, the values received and the machine conne
 | Where the server is | What reads the machines |
 |---|---|
 | On the machines' network (a server in the factory) | The collector inside the AAS Studio server — you do not need this program |
-| Outside the factory (cloud, head office) | **VEXPLOR Edge** — one factory PC reads and sends out |
+| Outside the factory (cloud, head office) | **VEXPLOR Edge** — one factory PC reads and sends out. The server cannot reach the machines, so "Load from equipment" does not work |
+| Outside, connected to the factory network by VPN | The server reads them itself through the VPN — no need for this program |
+
+Whatever reads the machines has to be on their network. Pictures of the three cases and what works in each: [user guide §1-2](docs/usage.md#1-2-the-three-cases-in-pictures).
 
 What to collect — PLC addresses, register kinds, data types — is set in the collection link (AID) of the equipment file in
 AAS Studio, not on the factory PC. What is set where, and how values travel: [user guide §3](docs/usage.md#3-equipment-links-and-collection--what-is-set-where-and-how-values-are-read).
@@ -87,9 +90,10 @@ The equipment readers come from VEXPLOR AAS Studio's release libraries (`@aas/co
 
 ## Versions
 
-| VEXPLOR Edge | Contract | Servers |
-|---|---|---|
-| 1.0.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) |
+| VEXPLOR Edge | Contract | Servers | What changed |
+|---|---|---|---|
+| 1.0.1 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) | Reopens lost equipment connections by itself (a PLC or MQTT broker restarted, a PLC switched on late). Connection errors show on the status screen ([guide §3-9](docs/usage.md#3-9-things-to-know)) |
+| 1.0.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) | First release |
 
 ## License
 
