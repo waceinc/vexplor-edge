@@ -100,7 +100,7 @@ describe('reconnecting to equipment', () => {
     const on = Date.now();
     await vi.advanceTimersByTimeAsync(40_000);
     expect(goodSince(buffer(), 'a-t1', on).length).toBeGreaterThan(5);
-    expect(link('a')).toEqual({ interfaceId: 'a', connected: true, lastError: null });
+    expect(link('a')).toMatchObject({ interfaceId: 'a', connected: true, lastError: null });
     await agent.stop();
   });
 
@@ -123,7 +123,7 @@ describe('reconnecting to equipment', () => {
     const back = goodSince(buffer(), 'a-t1', on);
     expect(back.length).toBeGreaterThan(5);
     expect(back.at(-1)?.value).toBe(8);
-    expect(link('a')).toEqual({ interfaceId: 'a', connected: true, lastError: null });
+    expect(link('a')).toMatchObject({ interfaceId: 'a', connected: true, lastError: null });
     expect(logs.some((line) => /reconnect/i.test(line))).toBe(true);
     expect(logs.some((line) => /connected again/i.test(line))).toBe(true);
     await agent.stop();
@@ -178,7 +178,7 @@ describe('reconnecting to equipment', () => {
     await agent.start();
     await vi.advanceTimersByTimeAsync(20_000);
     expect(goodSince(buffer(), 'b-t1', 0).length).toBeGreaterThanOrEqual(18);
-    expect(link('b')).toEqual({ interfaceId: 'b', connected: true, lastError: null });
+    expect(link('b')).toMatchObject({ interfaceId: 'b', connected: true, lastError: null });
     expect(link('a')?.connected).toBe(false);
     await agent.stop();
   });

@@ -132,7 +132,8 @@ Request `vexplor.edge.batch/1`:
 - `createdAt`, `samples[]` — `tagId`, `observedAt` (device time when known, else read time), `receivedAt` (when the
   edge read it), `value` (number, string, boolean or null), optional `quality` and `error`.
 - optional `status` — `startedAt`, `queuedBatches`, `droppedBatches`, `software`, and per interface `connected` and
-  `lastError`. A batch with no samples is a valid heartbeat.
+  `lastError`; from 1.1.0 also the PC, the line and how equipment answers (`host`, `server`, per-interface fields — §5.1). A
+  batch with no samples is a valid heartbeat.
 
 Response **200** `vexplor.edge.batchResult/1` — `bootId`, `seq`, `accepted`, `duplicate`, `rejected[]` (`index`,
 `tagId`, `code` — e.g. a tag that is not in the approved list), and the server's current `readListRevision`.
@@ -147,6 +148,46 @@ A batch the server already has answers 200 with `duplicate: true` and stores not
 **Order.** The edge sends one batch at a time, oldest first, and starts the next only after the previous one was
 answered — a backlog after an outage arrives before the batches read after it. A receiver may therefore treat a batch
 older than the last it stored from the same device as a backlog, not as a clock fault.
+
+### 5.1 Hardware and line state (added in edge 1.1.0 — optional)
+
+From edge 1.1.0 `status` carries the fields below as well. All are optional; a server that does not know them ignores
+them (principle 6) and takes the batch as before. A value the OS cannot give is left out, never sent as 0 or null.
+Measuring them opens no connection — the PC is read through Node itself (`os`, `fs.statfs`, `/proc/meminfo`), the
+server's clock from the `Date` header of the answers the edge gets anyway.
+
+`status.host` — the PC the collector runs on. Measured at most every 30 s; batches in between repeat the values.
+
+| Field | Meaning |
+|---|---|
+| `cpuPercent` | CPU busy, 0–100, average since the previous measurement |
+| `memoryUsedPercent` | Memory in use, 0–100. Linux: `MemTotal − MemAvailable`. Left out on other systems |
+| `diskFreeBytes` · `diskFreePercent` | Free space on the file system that holds the state folder (`stateDir`, where the queue is), as available to the edge's user |
+| `uptimeSeconds` | Seconds since the PC started |
+| `processUptimeSeconds` | Seconds since the edge process started |
+| `clockOffsetMs` | Server clock minus edge clock, ms; positive when the server is ahead. From the `Date` header (whole seconds) of the server's answers: each answer bounds the offset by when the request was sent and when the answer arrived, and the middle of the overlap of the last 10 ranges is reported. Left out until an answer with a `Date` header arrived |
+
+`status.server` — the line to the server.
+
+| Field | Meaning |
+|---|---|
+| `lastSendOkAt` | When a batch last got a 2xx; null before the first |
+| `lastSendError` · `lastSendErrorAt` | Why the last batch without a 2xx failed (no answer, or the status and `code`), and when |
+| `sendFailuresSinceOk` | Batch requests without a 2xx since the last one with |
+| `roundTripMs` | Average round trip of the last 10 answers, ms, connection and TLS included. Left out before the first answer |
+| `oldestQueuedAt` | When the oldest batch still on the PC was made; null when nothing waits (`queuedBatches` is there since 1.0) |
+
+`status.interfaces[]` — how each interface's equipment answers, next to 1.0's `connected` and `lastError`.
+
+| Field | Meaning |
+|---|---|
+| `responseMs` | Average time of the last good reads (up to 100), ms. Left out before the first |
+| `readOkRatio` | Share of the last 100 reads and connection attempts that succeeded, 0–1. A read where every tag came back an error, and a failed connection attempt, count as failures |
+| `reconnects` | Times a lost connection was opened again, counted since the read list was applied. Equipment that was off from the start and came on later is 0 |
+| `lastDisconnectAt` | When the connection was last found lost (a first connection that failed included); null if never |
+
+A batch's `status` is the state when the batch was made. Batches queued during an outage carry the state of that time
+and arrive later in order, so the current state is that of the newest batch.
 
 ## 6. Limits, errors and what the edge does
 

@@ -72,6 +72,13 @@ export class DiskQueue {
     return readdirSync(this.queueDir).filter((name) => name.endsWith('.json')).sort();
   }
 
+  /** When the oldest unsent batch was made (from its file name), or null when nothing waits */
+  oldestCreatedAt(): string | null {
+    const first = this.files()[0];
+    const at = first === undefined ? undefined : createdOf(first);
+    return at === undefined ? null : new Date(at).toISOString();
+  }
+
   get size(): number {
     return this.files().length;
   }

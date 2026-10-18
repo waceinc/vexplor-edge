@@ -603,6 +603,35 @@ turns **stale** and says what to check: ① is the PC on ② `systemctl status v
 proxy) open ④ `journalctl -u vexplor-edge` for `read list not reachable` or `sending paused` (§18). When the line comes
 back, the queued batches arrive in order and the row returns to Receiving — values from the outage are not lost.
 
+### 8-1. PC, line and equipment state (collector 1.1.0 and later)
+
+From 1.1.0 every batch also says how the factory PC is doing, how the line to the server is doing and how the equipment
+answers (exact definitions: [contract §5.1](contract.md#51-hardware-and-line-state-added-in-edge-110--optional)).
+Collectors 1.0.x do not send these values.
+
+| What | Values | Meaning |
+|---|---|---|
+| PC | `cpuPercent` · `memoryUsedPercent` | CPU and memory in use (%). CPU averaged over the last 30 s; memory on Linux only |
+| PC | `diskFreeBytes` · `diskFreePercent` | Free space on the disk that holds the queue — where batches pile up when the line drops (§14) |
+| PC | `uptimeSeconds` · `processUptimeSeconds` | Seconds since the PC and since the collector started. A sudden drop means a reboot or a restart |
+| PC | `clockOffsetMs` | Server clock minus PC clock (ms) |
+| Line | `lastSendOkAt` · `lastSendError` · `sendFailuresSinceOk` | When sending last worked, why it last failed, and how many sends failed since |
+| Line | `roundTripMs` · `oldestQueuedAt` | Average time until the server answers (ms) · when the oldest batch not yet sent was made |
+| Equipment | `responseMs` · `readOkRatio` | Average time the equipment takes to answer (ms) · share of the last 100 reads that worked |
+| Equipment | `reconnects` · `lastDisconnectAt` | Times a lost connection was opened again · when it was last lost |
+
+**When to look closer.** On the server's screen these count as a warning:
+
+| Threshold | Why it matters | What to do |
+|---|---|---|
+| Less than 10% disk free | Batches queued during an outage have little room. The queue limit (`maxQueuedBatches`, §11) counts batches, not bytes, so watch that the disk does not fill first (§14) | Free or add disk space on the PC; `maxQueuedBatches` can also be lowered |
+| Sending has failed for over a minute (`sendFailuresSinceOk` 1 or more, over a minute since the last success) | Values reach the server late | Look up `lastSendError` in §18 |
+| Clocks more than 5 s apart (`clockOffsetMs`, either sign) | Value times (`receivedAt`) are off by as much; past 5 minutes the server refuses requests (`ClockSkew`, §18) | Turn on time synchronisation (NTP) on the PC |
+| Equipment reads below 90% (`readOkRatio` under 0.9) | Values go missing or the connection drops often | Check power, cables and switches, and read `lastError` and `reconnects`. If `responseMs` is close to the reading interval, lengthen the interval |
+
+While sending keeps failing no batch reaches the server, so the row turns **stale**. The line values help afterwards — to
+see why it dropped once it is back — and when sending fails now and then.
+
 ## 9. Pause · resume · revoke
 
 | Button | What it does | Undo |

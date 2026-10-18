@@ -14,6 +14,7 @@
  * Important: one round never sleeps. It returns when it must wait, with the time to wait — the agent keeps reading
  *    equipment meanwhile, so an outage costs no samples, only queue space.
  */
+import { ServerLink } from './health.js';
 import type { EdgeHttp, Signer } from './http.js';
 import type { DiskQueue } from './queue.js';
 
@@ -34,6 +35,9 @@ export class Sender {
     private readonly queue: DiskQueue,
     private readonly signer: () => Signer,
     private readonly random: () => number = Math.random,
+    /** Batches sent or not, for the status (health.ts) */
+    readonly link: ServerLink = new ServerLink(),
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   /** Backoff after `failures` failed rounds: 1 s doubling to 5 min, ±20 % */
@@ -62,12 +66,14 @@ export class Sender {
         answer = await this.http.request(this.signer(), 'POST', '/edge/v1/batches', batch);
       } catch (error) {
         this.failures += 1;
+        this.link.sendFailed(this.now(), `no answer: ${(error as Error).message}`);
         return { state: 'wait', sent, waitMs: this.backoffMs(), reason: `no answer: ${(error as Error).message}`, ...(readListRevision ? { readListRevision } : {}) };
       }
       const body = answer.body as { code?: string; accepted?: number; rejected?: unknown[]; duplicate?: boolean; readListRevision?: string } | undefined;
       if (answer.status >= 200 && answer.status < 300) {
         this.queue.done(name);
         this.failures = 0;
+        this.link.sendOk(this.now());
         sent += 1;
         this.stats.sent += 1;
         this.stats.accepted += body?.accepted ?? 0;
@@ -76,6 +82,7 @@ export class Sender {
         if (body?.readListRevision) readListRevision = body.readListRevision;
         continue;
       }
+      this.link.sendFailed(this.now(), `${answer.status} ${body?.code ?? ''}`.trim());
       if ([400, 413, 422].includes(answer.status)) {
         this.queue.refuse(name);
         this.stats.refused += 1;

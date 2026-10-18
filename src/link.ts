@@ -13,6 +13,7 @@
  */
 import type { ProtocolReader, ReadResult } from '@aas/collector';
 import type { SubscribeOptions, ValueSubscription } from '@aas/opcua';
+import { EquipmentStats, type EquipmentHealth } from './health.js';
 import { intervalGroups, isAnalogType, readGroup, sampleOf, type ReadListInterface, type ReadListTag, type Sample } from './readers.js';
 
 /** A reader that can report changes itself (OPC UA) */
@@ -61,6 +62,8 @@ export class InterfaceLink {
   private timers: ReturnType<typeof setInterval>[] = [];
   private subscriptions: ValueSubscription[] = [];
   private readonly policy: ReconnectPolicy;
+  /** Response time, success ratio and reconnects for the status (health.ts) */
+  private readonly stats = new EquipmentStats();
 
   constructor(private readonly options: LinkOptions) {
     this.policy = { ...RECONNECT, ...options.policy };
@@ -74,8 +77,8 @@ export class InterfaceLink {
     return this.connect();
   }
 
-  status(): { interfaceId: string; connected: boolean; lastError: string | null } {
-    return { interfaceId: this.interfaceId, connected: this.reader !== undefined && this.error === undefined, lastError: this.error ?? null };
+  status(): { interfaceId: string; connected: boolean; lastError: string | null } & EquipmentHealth {
+    return { interfaceId: this.interfaceId, connected: this.reader !== undefined && this.error === undefined, lastError: this.error ?? null, ...this.stats.status() };
   }
 
   async close(): Promise<void> {
@@ -93,6 +96,7 @@ export class InterfaceLink {
       reader = await this.options.open();
     } catch (error) {
       this.error = message(error);
+      this.stats.opened(false);
       this.lostConnection(this.error);
       return;
     }
@@ -102,6 +106,7 @@ export class InterfaceLink {
     }
     this.reader = reader;
     this.failed = 0;
+    this.stats.opened(true);
     const subscriber = this.options.subscribe ? (reader as Partial<Subscriber>) : undefined;
     for (const [every, tags] of intervalGroups(this.options.iface)) {
       if (subscriber?.subscribe && (await this.watch(subscriber as Subscriber, every, tags, generation))) continue;
@@ -118,11 +123,12 @@ export class InterfaceLink {
         const reader = this.reader;
         if (busy || !reader) return;
         busy = true;
+        const started = this.options.now().getTime();
         this.timed(readGroup(reader, tags, this.options.now))
           .then((samples) => {
             if (generation !== this.generation) return;
             this.options.onSamples(samples);
-            this.judge(samples);
+            this.judge(samples, undefined, this.options.now().getTime() - started);
           })
           .catch((error: unknown) => {
             if (generation === this.generation) this.judge([], message(error));
@@ -186,8 +192,9 @@ export class InterfaceLink {
           const current = this.reader;
           if (busy || !current) return;
           busy = true;
+          const started = this.options.now().getTime();
           this.timed(readGroup(current, probe, this.options.now))
-            .then((samples) => generation === this.generation && this.judge(samples))
+            .then((samples) => generation === this.generation && this.judge(samples, undefined, this.options.now().getTime() - started))
             .catch((error: unknown) => generation === this.generation && this.judge([], message(error)))
             .finally(() => (busy = false));
         },
@@ -201,9 +208,10 @@ export class InterfaceLink {
    * One read's outcome: all errors (or a read that threw) is a failed read; anything else — a value, or a value that has
    * not arrived yet — is a good one. A tag that fails while others are read leaves the connection as connected.
    */
-  private judge(samples: Sample[], thrown?: string): void {
+  private judge(samples: Sample[], thrown?: string, ms?: number): void {
     const errors = samples.filter((sample) => sample.error !== undefined);
     const failed = thrown !== undefined || (samples.length > 0 && errors.length === samples.length);
+    this.stats.read(!failed, ms);
     if (!failed) {
       this.error = undefined;
       this.failed = 0;
@@ -229,6 +237,7 @@ export class InterfaceLink {
     // One line when the connection goes, then only at attempts 2, 4, 8 … — a PLC off for a day is a few dozen lines
     if (!this.lost) this.options.log(`${this.interfaceId}: ${reason} — reconnecting in ${seconds(delay)} (backoff up to ${seconds(this.policy.maxMs)})`);
     else if ((this.attempt & (this.attempt - 1)) === 0) this.options.log(`${this.interfaceId}: reconnect attempt ${this.attempt - 1} failed — ${reason}; next in ${seconds(delay)}`);
+    if (!this.lost) this.stats.lost(this.options.now());
     this.lost = true;
     this.retry = setTimeout(() => void this.connect(), delay);
   }

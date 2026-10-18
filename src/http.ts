@@ -31,6 +31,8 @@ export interface EdgeHttpOptions {
   ca?: string;
   timeoutMs?: number;
   now?: () => number;
+  /** Every answer to a signed request: when it was sent and received (ms) and its headers — health.ts ServerLink */
+  onAnswer?: (sentAt: number, receivedAt: number, headers: Record<string, string>) => void;
 }
 
 export interface Signer {
@@ -85,7 +87,9 @@ export class EdgeHttp {
   /** One signed request; resolves with any HTTP answer, rejects only when no answer arrived */
   async request(signer: Signer, method: string, target: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<EdgeResponse> {
     const bytes = body === undefined ? new Uint8Array() : Buffer.from(JSON.stringify(body));
-    const timestamp = Math.floor((this.options.now ?? Date.now)() / 1000);
+    const clock = this.options.now ?? Date.now;
+    const sentAt = clock();
+    const timestamp = Math.floor(sentAt / 1000);
     const nonce = randomBytes(16).toString('base64url');
     const signature = sign(null, Buffer.from(signedText(method, target, timestamp, nonce, signer.device, bytes)), signer.key).toString('base64url');
     const headers: Record<string, string> = {
@@ -96,7 +100,9 @@ export class EdgeHttp {
       ...(body === undefined ? {} : { 'content-type': 'application/json', 'content-length': String(bytes.length) }),
       ...extraHeaders,
     };
-    return this.send(new URL(target, this.server), method, headers, bytes);
+    const answer = await this.send(new URL(target, this.server), method, headers, bytes);
+    this.options.onAnswer?.(sentAt, clock(), answer.headers);
+    return answer;
   }
 
   /** An unsigned GET of another https address through the same proxy — the update manifest (update.ts) */
