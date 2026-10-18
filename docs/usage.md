@@ -310,11 +310,16 @@ device (2026-10-18).
 
 ### 3-9. Things to know in 1.0.0
 
-- **A lost equipment connection does not come back by itself.** If the PLC was off when the collector took the list,
-  or a PLC or MQTT broker restarts while it reads, that machine is not read again until the collector restarts. The first
-  case shows "Machines connected 0/1" and "Machine connection error: …"; the second stays **Receiving** with empty values
-  (measured for OPC UA, Modbus TCP and MQTT). After turning a PLC or broker back on, run
-  `sudo systemctl restart vexplor-edge` on the factory PC
+- **From 1.0.1 a lost equipment connection comes back by itself.** If the PLC was off when the collector took the list,
+  or a PLC or MQTT broker restarts while it reads, the collector does not need a restart. When opening fails, or three
+  reads in a row come back all errors, it closes that connection and opens it again after 1 s; if that fails, after 2 s,
+  4 s, 8 s … never more than 60 s (each delay shortened a little at random, so many collectors do not knock at once). Once
+  a read succeeds the delay starts again from 1 s. While it is down the screen shows "Machines connected 0/1" and
+  "Machine connection error: …", and other machines are read as before. With a 5 s interval it takes about 15 s to notice.
+  The factory PC log gets one line `… reconnecting in 1 s (backoff up to 60 s)` and one line
+  `… connected again after N attempt(s)` (measured for OPC UA, Modbus TCP and MQTT, including a PLC switched on late).
+  **1.0.0 does not reconnect** — after a drop it stays **Receiving** with empty values. After turning a PLC or broker back
+  on, run `sudo systemctl restart vexplor-edge` on the factory PC
 - **The reason a read failed is not always on the screen.** OPC UA empty values carry a status name (`Bad…`); Modbus TCP
   and MQTT show only an empty value. Check the address, register kind, data type and conventional-address conversion
   first
@@ -743,7 +748,9 @@ On the server, **revoke** the collector (§9). A PC removed without revoking sta
 | `ALARM: read list refused: 403 DeviceRevoked — sending stopped, the queue is kept` | Revoked on the server | If intended, remove it (§17). If not, connect again with a new command |
 | `ALARM: … 401 UnknownDevice …` | The server has no record of this device (its data was reset) | Remove (§17) and connect again with a new command |
 | `not registered — run register with a code first` | The service started without registration | Make a command on the screen and install again |
-| Screen "Machines connected 0/1" · "Machine connection error: …" | The PLC is unreachable or refuses | PLC address, port firewall, OPC UA certificates (§12-4), passwords (§12-3) |
+| Screen "Machines connected 0/1" · "Machine connection error: …" | The PLC is unreachable or refuses | PLC address, port firewall, OPC UA certificates (§12-4), passwords (§12-3). From 1.0.1 the collector retries at most every 60 s, so once the PLC is fixed it is read again by itself (§3-9) |
+| Log `… reconnecting in … s` · `reconnect attempt N failed` | A PLC or broker went off or restarted (1.0.1 and later) | Once it is on, `connected again` is logged and reading resumes. If it keeps failing, see the row above |
+| After a PLC or broker came back, **Receiving** but only empty values (1.0.0) | 1.0.0 does not reconnect a lost equipment connection | `sudo systemctl restart vexplor-edge`, or update to 1.0.1 or later (§15) |
 | Screen stays "Waiting for approval" | Not approved | Review and approve (§6-1) |
 | Screen "The files changed after approval" | A collection link changed | Approve again (§6-2) |
 | (empty) + `Bad…` in a value | The PLC could not give that tag | Check the tag on the PLC — not a collector problem |
