@@ -57,10 +57,13 @@ Cloud receives the same contract too (opened to design-partner companies first, 
   `vexplor-edge-<version>-linux-x64.tar.gz` (or `linux-arm64`) and `SHA256SUMS`, check them, then
   `sudo ./install.sh --server … --code …`.
 
-Supported: **Linux x64 · arm64** (systemd). Windows is in preparation. Full guide: [docs/install.md](docs/install.md)
+Supported: **Linux x64 · arm64** (systemd). Windows is in preparation. Full guide: [docs/install.md](docs/install.md) · End to end: [docs/usage.md](docs/usage.md)
 
 ## Documents
 
+- **[User guide](docs/usage.md)** — from the first connection to approval, reading a collector's state, pause and
+  revoke; the service, log and every configuration key on the factory PC; proxy, certificates, PLC passwords, sending
+  changes only, upgrading and troubleshooting, with screen captures (18 sections)
 - [Install and run](docs/install.md) — layouts (DMZ, equipment network), every destination it connects to, passwords
   and certificates, removal
 - [Contract `vexplor.edge/1`](docs/contract.md) — register, read list, batches, signing, errors. JSON Schema in

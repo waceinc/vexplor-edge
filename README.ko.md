@@ -54,10 +54,11 @@
 - **직접** — [Releases](https://github.com/waceinc/vexplor-edge/releases)에서 `vexplor-edge-<판>-linux-x64.tar.gz`(또는 `linux-arm64`)와
   `SHA256SUMS`를 받아 대조한 뒤 `sudo ./install.sh --server … --code …`.
 
-지원: **Linux x64 · arm64**(systemd). Windows는 준비 중입니다. 자세한 안내: [docs/설치.md](docs/설치.md)
+지원: **Linux x64 · arm64**(systemd). Windows는 준비 중입니다. 자세한 안내: [docs/설치.md](docs/설치.md) · 처음부터 끝까지: [docs/사용법.md](docs/사용법.md)
 
 ## 문서
 
+- **[사용법](docs/사용법.md)** — 처음 연결부터 승인 · 상태 읽기 · 정지 · 해지, 공장 PC 의 서비스 · 기록 · 설정 파일 전 항목, 프록시 · 인증서 · PLC 비밀번호, 바뀐 값만 보내기, 판 올리기, 문제 해결까지 화면 캡처와 함께(18장)
 - [설치 · 운영](docs/설치.md) — 배치(DMZ · 설비망), 연결하는 곳 전부, 비밀번호 · 인증서, 지우기
 - [규격 `vexplor.edge/1`](docs/계약.md) — 등록 · 읽을 목록 · 묶음 · 서명 · 오류. JSON 스키마 [`docs/schemas/`](docs/schemas/)
 

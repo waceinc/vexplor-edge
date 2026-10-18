@@ -1,6 +1,6 @@
 # Installing the remote collector (VEXPLOR Edge)
 
-*Korean: [설치.md](설치.md)* · Contract: [contract.md](contract.md)
+*Korean: [설치.md](설치.md)* · User guide: [usage.md](usage.md) · Contract: [contract.md](contract.md)
 
 VEXPLOR Edge is one program on one PC in the factory. It reads PLCs and controllers named by a **read list a person
 approved on the server**, and sends signed batches out over HTTPS. It is read only, opens no port, and has no remote
