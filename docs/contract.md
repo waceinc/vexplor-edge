@@ -165,6 +165,8 @@ server's clock from the `Date` header of the answers the edge gets anyway.
 | `diskFreeBytes` · `diskFreePercent` | Free space on the file system that holds the state folder (`stateDir`, where the queue is), as available to the edge's user |
 | `uptimeSeconds` | Seconds since the PC started |
 | `processUptimeSeconds` | Seconds since the edge process started |
+| `queuedInMemory` | Batches waiting in memory because the disk took none (§6, "A full disk") |
+| `queueWriteError` · `queueWriteErrorAt` | Why the last write of a batch to the queue failed (e.g. `ENOSPC`), and when. Left out if writing never failed since the process started |
 | `clockOffsetMs` | Server clock minus edge clock, ms; positive when the server is ahead. From the `Date` header (whole seconds) of the server's answers: each answer bounds the offset by when the request was sent and when the answer arrived, and the middle of the overlap of the last 10 ranges is reported. Left out until an answer with a `Date` header arrived |
 
 `status.server` — the line to the server.
@@ -211,6 +213,12 @@ Errors use one envelope, `vexplor.edge.error/1` — `code`, `message`, `retryabl
 
 **Local queue.** Every batch is written to disk before it is sent and deleted only after a 2xx. When the queue reaches
 its configured size, the oldest batches are dropped and counted in `status.droppedBatches` — never silently.
+
+**A full disk (edge 1.1.0).** When a batch cannot be written to disk the edge does not stop: the batch waits in memory
+and is sent from there, in the same order. Memory holds at most 1,000 batches and 100,000 samples; beyond that the
+oldest batches are dropped and added to `status.droppedBatches`. Once the disk takes writes again, the batches in memory
+are written first, in order. The failed write is reported in `status.host.queueWriteError` and `queueWriteErrorAt`, the
+batches in memory in `status.host.queuedInMemory`. Batches in memory are lost if the process ends meanwhile.
 
 **How long a batch may wait.** An unsent batch is kept at most `maxQueueDays` (default 30 days, an edge setting); older
 ones are dropped and counted the same way. A receiver keeps its duplicate memory (the idempotency key of §5) **longer

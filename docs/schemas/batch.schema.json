@@ -192,6 +192,19 @@
             "clockOffsetMs": {
               "type": "integer",
               "description": "Server clock minus edge clock in ms, from the Date header of the server's answers; positive when the server is ahead. Absent until an answer with a Date header arrived"
+            },
+            "queuedInMemory": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Batches waiting in memory because the disk took none (sent from there; written to disk once it takes them again)"
+            },
+            "queueWriteError": {
+              "type": "string",
+              "description": "The last failed write of a batch to the queue on disk (e.g. ENOSPC). Absent if writing never failed since the process started"
+            },
+            "queueWriteErrorAt": {
+              "type": "string",
+              "description": "ISO 8601 date-time, UTC (Z); when that write failed"
             }
           }
         },

@@ -783,6 +783,10 @@ reading at the interval.
 - Beyond `maxQueuedBatches` (100,000) or `maxQueueDays` (30 days), the oldest are dropped and the count is reported in the
   next batch's status — never silently
 - A batch the server refuses as malformed is moved to `refused` for a person to look at
+- A full disk does not stop the collector (from 1.1.0). A batch it cannot write waits in memory and is sent from there,
+  and goes to disk once there is room. Memory holds at most 1,000 batches and 100,000 values; beyond that the oldest are
+  dropped and the count is reported in the status. A service restart meanwhile loses what is in memory, so free the disk
+  first (disk free in §8-1)
 
 ## 15. Upgrading · update notices
 
@@ -864,6 +868,7 @@ On the server, **revoke** the collector (§9). A PC removed without revoking sta
 | Screen **stale**, log `read list not reachable: …` | The way out to the server is blocked | Check 443, proxy, DNS. Values are being queued |
 | `sending paused … ms: no answer: …` | The server does not answer | Check the server. The same batch is sent again |
 | `sending paused … ms: 401 ClockSkew` | The PC's clock is over 5 minutes off the server's | Turn on time sync (NTP) |
+| `queue: cannot write to disk, keeping batches in memory and sending them from there — ENOSPC …` | The PC's disk is full (from 1.1.0 the collector keeps running) | Free disk space; `queue: writing to disk again` follows once there is room. A restart before that loses the batches in memory |
 | `proxy refused CONNECT …` | The proxy blocks the server on 443 | Allow the server address on the proxy |
 | `ALARM: read list refused: 403 DeviceRevoked — sending stopped, the queue is kept` | Revoked on the server | If intended, remove it (§17). If not, connect again with a new command |
 | `ALARM: … 401 UnknownDevice …` | The server has no record of this device (its data was reset) | Remove (§17) and connect again with a new command |

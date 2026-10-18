@@ -96,7 +96,7 @@ export class EdgeAgent {
       ...(config.caFile ? { ca: readFileSync(config.caFile, 'utf8') } : {}),
       onAnswer: (sentAt, receivedAt, headers) => link.answered(sentAt, receivedAt, headers['date']),
     });
-    this.queue = new DiskQueue(config.stateDir, config.maxQueuedBatches, config.maxQueueDays);
+    this.queue = new DiskQueue(config.stateDir, config.maxQueuedBatches, config.maxQueueDays, () => this.now().getTime(), { log: this.log });
     this.sender = new Sender(this.http, this.queue, () => this.signer(), Math.random, link, this.now);
   }
 
@@ -134,7 +134,8 @@ export class EdgeAgent {
   async start(): Promise<void> {
     if (!this.identity.deviceId) throw new Error('not registered — run register with a code first');
     await this.poll();
-    this.flushTimer = setInterval(() => void this.tick(), this.options.config.flushIntervalMs);
+    // Nothing a round throws may end the process — the next round tries again (a full disk ended it before 1.1.0)
+    this.flushTimer = setInterval(() => void this.tick().catch((error: unknown) => this.log(`batching failed, trying again: ${(error as Error).message}`)), this.options.config.flushIntervalMs);
     if (this.options.config.update) {
       void this.checkUpdate();
       this.updateTimer = setInterval(() => void this.checkUpdate(), UPDATE_CHECK_MS);
@@ -283,7 +284,11 @@ export class EdgeAgent {
       interfaces: this.links.map((link) => link.status()),
       ...(this.updateAvailable ? { updateAvailable: this.updateAvailable.version } : {}),
       // 1.1.0: the PC and the line to the server (health.ts) — optional fields an older server ignores
-      host: this.host.status(this.now().getTime()),
+      host: {
+        ...this.host.status(this.now().getTime()),
+        queuedInMemory: this.queue.inMemory,
+        ...(this.queue.writeError ? { queueWriteError: this.queue.writeError.message, queueWriteErrorAt: this.queue.writeError.at } : {}),
+      },
       server: this.sender.link.status(this.queue.oldestCreatedAt()),
     };
   }
