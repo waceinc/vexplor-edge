@@ -1,5 +1,5 @@
 /**
- * MQTT login from the factory PC's credentials file (1.0.2). AAS Studio 2.8.0 lists an MQTT broker that wants a login
+ * MQTT login from the factory PC's credentials file (1.1.0). AAS Studio 2.8.0 lists an MQTT broker that wants a login
  * with `credentialRef` = its address and no password; the edge finds the pair in credentials.json, as for OPC UA.
  * Before, credentials were used for OPC UA only, so such a broker refused the connection (code 4).
  */

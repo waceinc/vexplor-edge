@@ -6,7 +6,7 @@
  * Important: the read list is the whole truth about what to read. A device without an approved list reads nothing;
  *    tags are grouped by their interval (a tag's own intervalMs overrides the interface's).
  * Important: a reading that has not arrived yet (`pending`) makes no sample — no fake value in the time series.
- * Important: a login (`credentialRef`) is looked up in the credentials file for OPC UA and, since 1.0.2, MQTT.
+ * Important: a login (`credentialRef`) is looked up in the credentials file for OPC UA and, since 1.1.0, MQTT.
  */
 import type { AidInterface, ProtocolReader, ReadResult } from '@aas/collector';
 

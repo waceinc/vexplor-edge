@@ -76,7 +76,7 @@ system, its state folder writable, no capabilities). Logs: `journalctl -u vexplo
 
 - **PLC passwords** live in a credentials file on this PC, by endpoint — `{ "opc.tcp://10.0.0.5:4840": { "userName",
   "password" } }` — passed with `--credentials-file`. They are never in the AAS or the read list. An MQTT broker login
-  goes in the same file under the broker's address (1.0.2 and later).
+  goes in the same file under the broker's address (1.1.0 and later).
 - **OPC UA certificates**: the collector makes its own certificate in `<state>/opcua-pki`. A server certificate it has
   never seen is refused and kept in `<state>/opcua-pki/rejected`; move it to `trusted/certs` to trust it, or set
   `"opcua": { "trustFirstUse": true }`. The OPC UA server must trust the collector's certificate too.

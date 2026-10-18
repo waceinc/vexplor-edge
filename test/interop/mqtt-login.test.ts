@@ -1,5 +1,5 @@
 /**
- * MQTT login end to end against a real AAS Studio server (2.8.0 + edge 1.0.2): the AID says a login is needed, the read
+ * MQTT login end to end against a real AAS Studio server (2.8.0 + edge 1.1.0): the AID says a login is needed, the read
  * list names the broker's address as `credentialRef` and carries no password, and the edge logs in with the pair from
  * its credentials file. Before, the only way was `mqtt://user:password@host` — the password then sat in the AAS and in
  * every read list.
