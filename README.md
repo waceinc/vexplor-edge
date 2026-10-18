@@ -92,6 +92,7 @@ The equipment readers come from VEXPLOR AAS Studio's release libraries (`@aas/co
 
 | VEXPLOR Edge | Contract | Servers | What changed |
 |---|---|---|---|
+| 1.1.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (one-click screen from 2.7.0, health screen and MQTT login from 2.8.0) | Batch status also reports the factory PC (CPU, memory, disk, uptime, clock offset from the server), the line to the server (last success, last failure, round trip, oldest queued batch) and how equipment answers (response time, read success ratio, reconnects, last disconnect). A server that does not know these fields takes the batches as before ([guide §8-1](docs/usage.md#8-1-pc-line-and-equipment-state-collector-110-and-later)). Reads MQTT broker logins from the factory PC's `credentials.json` ("Login required" in AAS Studio 2.8.0). A full disk no longer stops the collector |
 | 1.0.1 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) | Reopens lost equipment connections by itself (a PLC or MQTT broker restarted, a PLC switched on late). Connection errors show on the status screen ([guide §3-9](docs/usage.md#3-9-things-to-know)) |
 | 1.0.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 or later (the one-click screen from 2.7.0) | First release |
 

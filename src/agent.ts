@@ -14,6 +14,7 @@ import { hostname } from 'node:os';
 
 import type { ProtocolReader } from '@aas/collector';
 import type { EdgeConfig } from './config.js';
+import { HostMonitor, ServerLink, type HostProbe } from './health.js';
 import { EdgeHttp, signerOf, type Signer } from './http.js';
 import { loadOrCreateIdentity, saveIdentity, type Identity } from './identity.js';
 import { DiskQueue, type Batch } from './queue.js';
@@ -30,6 +31,8 @@ export interface AgentOptions {
   now?: () => Date;
   /** Reconnecting to equipment (link.ts) — the defaults are what a release runs with */
   reconnect?: Partial<ReconnectPolicy>;
+  /** How the PC is measured for `status.host` (health.ts) — a fake in tests */
+  hostProbe?: HostProbe;
 }
 
 interface ReadList {
@@ -73,6 +76,7 @@ export class EdgeAgent {
   private sendAfter = 0;
   private lastBatchAt = 0;
   private readonly startedAt: string;
+  private readonly host: HostMonitor;
   private readonly log: (line: string) => void;
   private readonly now: () => Date;
 
@@ -83,9 +87,17 @@ export class EdgeAgent {
     this.log = options.log ?? (() => undefined);
     this.startedAt = this.now().toISOString();
     this.identity = loadOrCreateIdentity(config.stateDir);
-    this.http = new EdgeHttp({ server: config.server, ...(config.proxy ? { proxy: config.proxy } : {}), ...(config.caFile ? { ca: readFileSync(config.caFile, 'utf8') } : {}) });
-    this.queue = new DiskQueue(config.stateDir, config.maxQueuedBatches, config.maxQueueDays);
-    this.sender = new Sender(this.http, this.queue, () => this.signer());
+    // The line to the server is measured on the answers the edge gets anyway — no request is made for it
+    const link = new ServerLink();
+    this.host = new HostMonitor(config.stateDir, link.clock, options.hostProbe);
+    this.http = new EdgeHttp({
+      server: config.server,
+      ...(config.proxy ? { proxy: config.proxy } : {}),
+      ...(config.caFile ? { ca: readFileSync(config.caFile, 'utf8') } : {}),
+      onAnswer: (sentAt, receivedAt, headers) => link.answered(sentAt, receivedAt, headers['date']),
+    });
+    this.queue = new DiskQueue(config.stateDir, config.maxQueuedBatches, config.maxQueueDays, () => this.now().getTime(), { log: this.log });
+    this.sender = new Sender(this.http, this.queue, () => this.signer(), Math.random, link, this.now);
   }
 
   private signer(): Signer {
@@ -122,7 +134,8 @@ export class EdgeAgent {
   async start(): Promise<void> {
     if (!this.identity.deviceId) throw new Error('not registered — run register with a code first');
     await this.poll();
-    this.flushTimer = setInterval(() => void this.tick(), this.options.config.flushIntervalMs);
+    // Nothing a round throws may end the process — the next round tries again (a full disk ended it before 1.1.0)
+    this.flushTimer = setInterval(() => void this.tick().catch((error: unknown) => this.log(`batching failed, trying again: ${(error as Error).message}`)), this.options.config.flushIntervalMs);
     if (this.options.config.update) {
       void this.checkUpdate();
       this.updateTimer = setInterval(() => void this.checkUpdate(), UPDATE_CHECK_MS);
@@ -270,6 +283,13 @@ export class EdgeAgent {
       software: SOFTWARE,
       interfaces: this.links.map((link) => link.status()),
       ...(this.updateAvailable ? { updateAvailable: this.updateAvailable.version } : {}),
+      // 1.1.0: the PC and the line to the server (health.ts) — optional fields an older server ignores
+      host: {
+        ...this.host.status(this.now().getTime()),
+        queuedInMemory: this.queue.inMemory,
+        ...(this.queue.writeError ? { queueWriteError: this.queue.writeError.message, queueWriteErrorAt: this.queue.writeError.at } : {}),
+      },
+      server: this.sender.link.status(this.queue.oldestCreatedAt()),
     };
   }
 }

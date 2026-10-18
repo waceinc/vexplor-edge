@@ -27,6 +27,9 @@ release is not done while any of these still shows the old version or misses wha
 1. **Version strings** — `src/version.ts`, `package.json`, the "Versions" table in both READMEs.
 2. **What changed** — the README table and the guide that covers it (`docs/install.md` · `docs/설치.md`, the contract),
    in English and Korean.
+   Add the new version's row with a filled "What changed" cell, and the same row on top of the "What changed in each version"
+   table on the wace.me Edge page (`chg` in `wace-home/scripts/build-edge-page.py`, Korean, English, Japanese) and the
+   "Versions" section of the project page. Older rows stay; the daily check compares these rows too.
 3. **Release** — `npm run pack:release`, tag `vX.Y.Z`, attach both Linux packages, `get.sh` and `SHA256SUMS`. The
    one-line install always fetches `releases/latest/download/get.sh`, which is pinned to its own release.
 4. **Website** — the VEXPLOR Edge page on wace.me (Korean, English, Japanese) and the project page on the `gh-pages`

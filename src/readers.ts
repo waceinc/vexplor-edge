@@ -6,6 +6,7 @@
  * Important: the read list is the whole truth about what to read. A device without an approved list reads nothing;
  *    tags are grouped by their interval (a tag's own intervalMs overrides the interface's).
  * Important: a reading that has not arrived yet (`pending`) makes no sample — no fake value in the time series.
+ * Important: a login (`credentialRef`) is looked up in the credentials file for OPC UA and, since 1.1.0, MQTT.
  */
 import type { AidInterface, ProtocolReader, ReadResult } from '@aas/collector';
 
@@ -79,8 +80,27 @@ export async function openReader(iface: ReadListInterface, options: OpenOptions)
     });
   }
   if (iface.protocol === 'MODBUS') return (await import('@aas/fieldbus')).ModbusReader.connect(toAidInterface(iface));
-  if (iface.protocol === 'MQTT') return (await import('@aas/fieldbus')).MqttReader.connect(toAidInterface(iface));
+  if (iface.protocol === 'MQTT') {
+    const ref = iface.security.credentialRef;
+    const user = ref ? options.credentials.get(ref) : undefined;
+    if (ref && !user) throw new Error(`no credential named ${ref} in the credentials file`);
+    const { MqttReader } = await import('@aas/fieldbus');
+    if (!user) return MqttReader.connect(toAidInterface(iface));
+    // Important: the login goes into the address only for the connection, in memory on this PC — the read list never
+    //    carries it (AAS Studio 2.8.0 lists `credentialRef` only). This form works with every @aas/fieldbus release.
+    //    The reader handed back reports the listed address, so no log or status line can show the password.
+    const reader = await MqttReader.connect({ ...toAidInterface(iface), base: withLogin(iface.endpoint, user) });
+    return { base: iface.endpoint, read: (sources) => reader.read(sources), close: () => reader.close() };
+  }
   throw new Error(`${iface.protocol} is not read by this edge yet`);
+}
+
+/** An mqtt:// or mqtts:// address with a user name and password in it — percent-encoded, as the reader decodes it */
+export function withLogin(endpoint: string, user: { userName: string; password: string }): string {
+  const url = new URL(endpoint.replace(/^mqtt(s?):/i, 'http$1:'));
+  url.username = user.userName;
+  url.password = user.password;
+  return url.toString().replace(/^http(s?):/i, 'mqtt$1:').replace(/\/$/, endpoint.endsWith('/') ? '/' : '');
 }
 
 /** Tags of an interface grouped by their effective interval */
