@@ -260,7 +260,7 @@ html.js .rv.in{opacity:1;transform:none}
 </div></div></header>
 <main id="main">
 <section class="hero" id="top"><div class="wrap">
-<p class="eyebrow"><span lang="ko">오픈소스&nbsp;· Apache-2.0&nbsp;· v1.0.0</span><span lang="en">Open source&nbsp;· Apache-2.0&nbsp;· v1.0.0</span></p>
+<p class="eyebrow"><span lang="ko">오픈소스&nbsp;· Apache-2.0&nbsp;· v1.0.1</span><span lang="en">Open source&nbsp;· Apache-2.0&nbsp;· v1.0.1</span></p>
 <h1 lang="ko">VEXPLOR Edge는 공장 PC 한 대에서 승인한 설비 값만 읽어 밖으로만 보냅니다</h1><h1 lang="en">VEXPLOR Edge reads only the approved machine values on one factory PC and sends them out — outbound only</h1>
 <div class="hero-sub">
 <div><p lang="ko" class="lead">서버가 클라우드&nbsp;· 본사처럼 공장 밖에 있을 때 쓰는 원격 수집기입니다. VEXPLOR AAS Studio 화면에서 단추를 누르고, 나온 한 줄을 공장 PC에 붙여 넣으면 설치&nbsp;· 등록&nbsp;· 승인까지 끝납니다. 공장으로 들어오는 연결도, 원격 정지도, PLC에 쓰는 기능도 없습니다.</p><p lang="en" class="lead">The remote collector for when the server is outside the factory — in the cloud or at head office. Press one button on the VEXPLOR AAS Studio screen, paste the line it shows on the factory PC, and install, registration and approval are done. Nothing connects into the factory, there is no remote stop, and it never writes to a PLC.</p></div>
@@ -295,8 +295,8 @@ html.js .rv.in{opacity:1;transform:none}
 </div></section>
 <section id="verified" class="sec"><div class="wrap">
 <p class="eyebrow"><span lang="ko">확인한 것</span><span lang="en">Verified</span></p>
-<h2 lang="ko">VEXPLOR Edge 1.0.0은 화면이 만든 명령 그대로 깨끗한 Linux에서 검증됐습니다</h2><h2 lang="en">VEXPLOR Edge 1.0.0 was checked on clean Linux with the exact command the screen makes</h2>
-<ul class="limits"><li><span lang="ko">서버 화면이 만든 명령을 깨끗한 Ubuntu 24.04(arm64&nbsp;· x86_64)에 그대로 붙여 넣어 릴리스 내려받기 → SHA256SUMS 대조 → 설치 → 미리 승인된 등록 → OPC UA 가상 PLC 읽기 → 서버 저장까지 확인했습니다</span><span lang="en">The command the server screen made was pasted as is on clean Ubuntu 24.04 (arm64 and x86_64): release download → SHA256SUMS check → install → pre-approved registration → reading an OPC UA virtual PLC → values stored on the server</span></li><li><span lang="ko">실제 VEXPLOR AAS Studio 서버를 상대로 한 상호 시험을 저장소 CI에서 매번 실행하고, 규격 사본(스키마&nbsp;· 예시&nbsp;· 서명 예시)이 서버 쪽과 같은지 대조합니다</span><span lang="en">Interop tests against a real VEXPLOR AAS Studio server run in the repository CI every time, and check the contract copy (schemas, examples, signing example) matches the server's</span></li><li><span lang="ko">포트 열기&nbsp;· 명령 실행&nbsp;· 원격 정지&nbsp;· 내장 비밀번호가 소스에 들어오면 시험이 실패합니다</span><span lang="en">A listening port, running a command, a remote stop or a built-in password in the source fails the tests</span></li><li><span lang="ko">화면 그림의 값은 가상 PLC(시뮬레이션) 시험 값이며 실제 설비 데이터가 아닙니다</span><span lang="en">The values in the screen picture come from a virtual PLC (simulation), not real machine data</span></li></ul>
+<h2 lang="ko">VEXPLOR Edge는 화면이 만든 명령 그대로 깨끗한 Linux에서 검증됐습니다</h2><h2 lang="en">VEXPLOR Edge was checked on clean Linux with the exact command the screen makes</h2>
+<ul class="limits"><li><span lang="ko">1.0.1 x64 꾸러미를 깨끗한 Ubuntu 24.04 컨테이너에 설치해 OPC UA 가상 PLC를 20초 껐다 켰습니다. 수집기는 끊김을 상태 화면에 알리고 4번째 시도에 다시 연결했으며, 다시 시작하지 않고 값이 다시 들어왔습니다</span><span lang="en">The 1.0.1 x64 package was installed in a clean Ubuntu 24.04 container and an OPC UA virtual PLC was stopped for 20 s and started again. The collector reported the drop on the status screen, reconnected on the 4th attempt, and values resumed with no restart</span></li><li><span lang="ko">서버 화면이 만든 명령을 깨끗한 Ubuntu 24.04(arm64&nbsp;· x86_64)에 그대로 붙여 넣어 릴리스 내려받기 → SHA256SUMS 대조 → 설치 → 미리 승인된 등록 → OPC UA 가상 PLC 읽기 → 서버 저장까지 확인했습니다</span><span lang="en">The command the server screen made was pasted as is on clean Ubuntu 24.04 (arm64 and x86_64): release download → SHA256SUMS check → install → pre-approved registration → reading an OPC UA virtual PLC → values stored on the server</span></li><li><span lang="ko">실제 VEXPLOR AAS Studio 서버를 상대로 한 상호 시험을 저장소 CI에서 매번 실행하고, 규격 사본(스키마&nbsp;· 예시&nbsp;· 서명 예시)이 서버 쪽과 같은지 대조합니다</span><span lang="en">Interop tests against a real VEXPLOR AAS Studio server run in the repository CI every time, and check the contract copy (schemas, examples, signing example) matches the server's</span></li><li><span lang="ko">포트 열기&nbsp;· 명령 실행&nbsp;· 원격 정지&nbsp;· 내장 비밀번호가 소스에 들어오면 시험이 실패합니다</span><span lang="en">A listening port, running a command, a remote stop or a built-in password in the source fails the tests</span></li><li><span lang="ko">화면 그림의 값은 가상 PLC(시뮬레이션) 시험 값이며 실제 설비 데이터가 아닙니다</span><span lang="en">The values in the screen picture come from a virtual PLC (simulation), not real machine data</span></li></ul>
 </div></section>
 <section id="start" class="sec"><div class="wrap">
 <p class="eyebrow"><span lang="ko">설치</span><span lang="en">Install</span></p>
@@ -307,11 +307,11 @@ html.js .rv.in{opacity:1;transform:none}
 </div></section>
 </main>
 <footer class="foot"><div class="wrap foot-in">
-<div><p class="foot-brand"><b>VEXPLOR</b> Edge <span class="ver">v1.0.0</span></p>
+<div><p class="foot-brand"><b>VEXPLOR</b> Edge <span class="ver">v1.0.1</span></p>
 <p><span lang="ko">Apache License 2.0 — 고쳐 쓰고 상용 제품에 넣을 수 있습니다</span><span lang="en">Apache License 2.0 — modify it and ship it in commercial products</span></p><p class="tm"><span lang="ko">VEXPLOR&nbsp;· WACE 이름과 로고는 Apache-2.0 사용 허락에 들어 있지 않습니다 (NOTICE 참고).</span><span lang="en">The names and logos VEXPLOR and WACE are not covered by the Apache-2.0 license (see NOTICE).</span></p></div>
 <ul class="foot-links">
 <li><a href="https://github.com/waceinc/vexplor-edge">GitHub</a></li>
-<li><a href="https://github.com/waceinc/vexplor-edge/releases/tag/v1.0.0"><span lang="ko">v1.0.0 릴리스 노트</span><span lang="en">v1.0.0 release notes</span></a></li>
+<li><a href="https://github.com/waceinc/vexplor-edge/releases/tag/v1.0.1"><span lang="ko">v1.0.1 릴리스 노트</span><span lang="en">v1.0.1 release notes</span></a></li>
 <li><a href="https://waceinc.github.io/vexplor-aas/">VEXPLOR AAS Studio</a></li>
 <li><a class="lnk" href="https://wace.me/en-opensource" data-href-ko="https://wace.me/opensource" data-href-en="https://wace.me/en-opensource"><span lang="ko">웨이스 오픈소스</span><span lang="en">WACE open source</span></a></li>
 <li><a href="https://wace.me">wace.me</a></li>
