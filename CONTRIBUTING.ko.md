@@ -31,5 +31,8 @@ AAS_DIR=../vexplor-aas npm run test:interop   # 빌드한 waceinc/vexplor-aas �
 4. **웹사이트** — wace.me 의 VEXPLOR Edge 페이지(국 · 영 · 일)와 `gh-pages` 브랜치의 프로젝트 페이지
    (waceinc.github.io/vexplor-edge): 판 표기와 바뀐 것. 판을 올리는 사람이 코드를 보고 직접 작성합니다. 매일 점검이 최신 릴리스와
    README · 웹사이트를 대조합니다.
+   검색과 AI 답변은 wace.me 의 두 곳을 더 읽습니다 — 제품 페이지 구조화 데이터의 `softwareVersion` 과 `/opensource` 프로젝트 카드의 판.
+   둘 다 `wace-home/scripts/oss_seo.py` 의 `VERSIONS` 에서 만들어집니다(명령 4개는 사이트 저장소 README, Edge 페이지 본문의 판은 `build-edge-page.py`). 배포 전에 두 번 돌려
+   두 번째에 바뀌는 것이 없는지 보고, 배포 뒤 바뀐 주소를 IndexNow 로 알립니다.
 
 기여한 내용은 이 저장소의 [Apache License 2.0](LICENSE)으로 배포됩니다.
