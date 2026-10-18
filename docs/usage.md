@@ -185,13 +185,13 @@ set where and how a value travels from the equipment to the server's screen, wit
 | Modbus conventional address (`40001` …) | AAS Studio — collection link | Type `40001` and a button "40001 → Holding register #0" appears next to it. It converts only when pressed |
 | Modbus register count (quantity) | AAS Studio — collection link | Follows from the data type (1, 2 or 4). To read a different count, add `?quantity=2` to the address |
 | Data type | AAS Studio — collection link | Modbus: unsignedShort · short · unsignedInt · int · float · double · boolean. OPC UA and MQTT: float · integer · string · boolean |
-| Modbus byte and word order | AAS Studio — collection link (API) | Default: high byte first, high word first. The screen has no field for it (§3-3) |
-| Unit | AAS Studio — collection link (API) | The screen has no field. It reaches the read list only when the link is made through the API or comes from an AID that states it |
+| Modbus byte and word order | AAS Studio — collection link | Picked per row from `ABCD` · `CDAB` · `BADC` · `DCBA` (AAS Studio 2.8.0 and later). The default `ABCD` is high byte first, high word first (§3-3) |
+| Unit | AAS Studio — collection link | The "Unit" field on each row (optional, AAS Studio 2.8.0 and later). Earlier versions took it through the API only |
 | Tag name | AAS Studio — collection link | Name it like the model element (idShort), so the standard API puts the value on that element |
-| Read interval | AAS Studio server | 5 s by default — or `COLLECT_INTERVAL` when the server runs with `COLLECT=on` · `COLLECT_INTERVAL=<s>`. Per machine or tag: `intervals` on the approve API (100 ms – 1 h, [contract.md](contract.md) §8). The approve buttons on the screen approve with the default |
-| OPC UA security (Sign · SignAndEncrypt) and user-name sign-in | AAS Studio — collection link | The AID must state it (`securityDefinitions`). A link made on the screen states none, so it connects with **security None, anonymous** |
-| PLC user name and password | Label on the server, value on the factory PC | The read list carries only a label (`credentialRef` = that machine's endpoint); the value stays in `credentials.json` on the factory PC (§12-3). OPC UA only |
-| MQTT user name and password | AAS Studio — collection link | Part of the address (`mqtt://user:password@host:1883`), so it stays in the server's equipment file (§3-9) |
+| Read interval | AAS Studio — collection link · server | "Read period (s)" on the collection link puts that value in the list (AAS Studio 2.8.0 and later). Empty uses the server default — 5 s, or `COLLECT_INTERVAL` when the server runs with `COLLECT=on` · `COLLECT_INTERVAL=<s>`. `intervals` on the approve API (100 ms – 1 h, [contract.md](contract.md) §8) comes before both. The approve buttons on the screen approve with the values in the list |
+| OPC UA security (Sign · SignAndEncrypt) and user-name sign-in | AAS Studio — collection link | Pick the security mode, policy and "Login required" in "Create collection link" and the AID states it (`securityDefinitions`, AAS Studio 2.8.0 and later). A link made on the screen with an earlier version connects with **security None, anonymous** |
+| PLC user name and password | Label on the server, value on the factory PC | The read list carries only a label (`credentialRef` = that machine's endpoint); the value stays in `credentials.json` on the factory PC (§12-3). OPC UA, and MQTT (collector 1.0.2 and later) |
+| MQTT user name and password | Label on the server, value on the factory PC | Turn on "Login required" on the collection link (AAS Studio 2.8.0 and later); the value stays in `credentials.json` as for OPC UA (collector 1.0.2 and later, §12-3). An old link with the password in its address (`mqtt://user:password@host`) is left out of the read list by a 2.8.0 server (§3-9) |
 | Collection mode (read every interval · OPC UA subscription), deadband, resend interval | Factory PC — `edge.json` | `opcua.mode` · `opcua.deadband` · `opcua.resendMs` (§13) |
 | Batch interval · queue size | Factory PC — `edge.json` | `flushIntervalMs` · `maxQueuedBatches` · `maxQueueDays` (§11) |
 | Server address · proxy · private CA · OPC UA certificates | Factory PC — `edge.json` | §11 · §12 |
@@ -262,10 +262,10 @@ value with the status name (e.g. `BadNodeIdUnknown`).
   manual — must not be used as they are. Type one in the address field and a button such as "40001 → Holding register #0"
   appears; pressing it converts to the kind and a register number starting at 0. Without pressing it, `40001` is read
   as register number 40001 — the wrong register, or an empty value on a device that has no such number (measured in §3-8)
-- **Byte and word order.** The default is high byte first, high word first (big-endian). If floats or 32-bit integers
-  come out as nonsense, the PLC sends the low word first. The screen has no field for this, so make the collection link
-  through the AAS Studio API `POST /packages/{id}/aid` with `"form": { "modv_mostSignificantWord": "false" }` on each
-  tag (`"unit"` can be given the same way)
+- **Byte and word order.** The default is high byte first, high word first (big-endian, `ABCD`). If floats or 32-bit
+  integers come out as nonsense, the PLC sends the low word first. From AAS Studio 2.8.0 pick `CDAB` (words swapped) in
+  that row's order field. Earlier versions needed the API `POST /packages/{id}/aid` with
+  `"form": { "modv_mostSignificantWord": "false" }` on each tag
 
 **MQTT**
 
@@ -411,13 +411,17 @@ device (2026-10-18).
   `… connected again after N attempt(s)` (measured for OPC UA, Modbus TCP and MQTT, including a PLC switched on late).
   **1.0.0 does not reconnect** — after a drop it stays **Receiving** with empty values. After turning a PLC or broker back
   on, run `sudo systemctl restart vexplor-edge` on the factory PC
-- **The reason a read failed is not always on the screen.** OPC UA empty values carry a status name (`Bad…`); Modbus TCP
-  and MQTT show only an empty value. Check the address, register kind, data type and conventional-address conversion
-  first
-- **MQTT passwords stay on the server.** They are part of the address, so they are in the equipment file and the read
-  list. The factory PC's `credentials.json` is used for OPC UA only. Use a separate read-only account
-- **An OPC UA collection link made on the screen is security None, anonymous.** A PLC that needs `Sign` ·
-  `SignAndEncrypt` or a user-name sign-in needs an AID that states its security (§12-3 · §12-4)
+- **From AAS Studio 2.8.0 the reason a read failed stays on its row in "Collect" as "Read failed — reason".** Earlier
+  servers did not store it: OPC UA empty values carried a status name (`Bad…`), Modbus TCP and MQTT showed only an empty
+  value. When a reason shows, check the address, register kind, data type and conventional-address conversion first
+- **From AAS Studio 2.8.0 and collector 1.0.2 an MQTT login lives in the factory PC's `credentials.json`.** With "Login
+  required" on the collection link, the read list carries only a label (`credentialRef` = the broker address).
+  **Collectors 1.0.1 and earlier do not use the file for MQTT and connect anonymously**, so a broker that wants a login
+  refuses them (code 4) — update the collector to 1.0.2 first. An old link with the password in its address is left out
+  of the list by a 2.8.0 server, which says so on the screen and in the check (AID-1). Use a separate read-only account
+- **From AAS Studio 2.8.0, OPC UA security and user-name sign-in are picked in "Create collection link".** A link made
+  on the screen with an earlier version is security None, anonymous — pick them in "Edit link" and create it again
+  (§12-3 · §12-4)
 
 ## 4. On the server — turn on remote collection
 
@@ -727,10 +731,14 @@ PLC user names and passwords go neither on the server nor in equipment files. Th
 (`credentialRef`); the values stay in a file on the factory PC:
 
 ```json
-{ "opc.tcp://10.0.0.5:4840": { "userName": "reader", "password": "…" } }
+{
+  "opc.tcp://10.0.0.5:4840": { "userName": "reader", "password": "…" },
+  "mqtt://10.0.0.7:1883": { "userName": "line1", "password": "…" }
+}
 ```
 
-Pass it at install with `--credentials-file credentials.json`; it is copied to `/etc/vexplor-edge/credentials.json`
+The key is the collection link's address as written. An MQTT broker login goes in the same file (collector 1.0.2 and
+later, "Login required" in AAS Studio 2.8.0). Pass it at install with `--credentials-file credentials.json`; it is copied to `/etc/vexplor-edge/credentials.json`
 (readable by root and the service account only). If the named entry is missing, that machine does not connect and the
 screen shows "no credential named … in the credentials file".
 
