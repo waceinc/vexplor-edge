@@ -335,6 +335,11 @@ this PC to the PLC. The frames follow LS ELECTRIC's "XGT FEnet I/F Module User's
 test server built from it, not yet against a real PLC. A collector older than 1.3.0 shows "Machine connection
 error: XGT is not read by this edge yet".
 
+**Check the word order first.** The manuals do not show the order of the words inside a DINT, UDINT, DWORD, REAL,
+LREAL, LINT or ULINT; the collector reads the low byte and low word first. If INT and BOOL read right but REAL or DINT
+do not, send a [PLC field report](https://github.com/waceinc/vexplor-edge/issues/new?template=field_report.md) with the value XG5000 shows and the value read. The other points the
+manuals leave open are listed in AAS Studio's usage guide §8 (XGT).
+
 ### 3-4. Equipment addresses are as seen from the factory PC — when the server is outside the factory
 
 What works and what does not for each server location is summed up first in [the pictures in §1-2](#1-2-the-three-cases-in-pictures) and the table in §1-3. This section is the detail for whoever installs.

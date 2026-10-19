@@ -84,6 +84,9 @@ XGT 도 같은 VEXPLOR 확장입니다. LS ELECTRIC 이 공개한 「XGT FEnet I
 시험용 서버로 시험했으며, 코드에는 읽기 요청(명령어 0x0054)만 있습니다. 읽을 목록은 AAS Studio 2.11.0 이상이 만듭니다.
 XG5000 에서 FEnet 모듈의 드라이버를 **XGT 서버**(TCP 2004)로 두고, 호스트 테이블을 켰다면 이 PC 의 주소를 넣습니다
 ([사용법 3-3절](docs/사용법.md)).
+가장 큰 미확인은 워드 순서입니다. 설명서에는 여러 워드에 걸친 값(DINT · REAL · LREAL 등)의 워드 순서가 없어, 수집기는 하위 워드
+먼저로 읽습니다. INT · BOOL 은 맞는데 REAL · DINT 만 틀리면 이 때문입니다. 설명서로 정해지지 않은 것 전체는 AAS Studio 사용법
+8절(XGT)에 있습니다.
 
 **실기 확인: 사용자 보고 기다림.** S7 · MC · XGT 는 실물 PLC 없이 만들었습니다. 읽어 보셨다면
 [PLC 실기 확인 보고 서식](https://github.com/waceinc/vexplor-edge/issues/new?template=field_report.md)으로 알려 주십시오 — 제조사 · 계열 · CPU · 펌웨어 · 주소 · 기대한 값과 읽은 값(못 읽었으면 그

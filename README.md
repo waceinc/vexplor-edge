@@ -87,6 +87,9 @@ XGT is the same kind of extension, built from LS ELECTRIC's published "XGT FEnet
 chapter 8) and tested against a test server that follows it — only the read request (instruction 0x0054) is built.
 It needs AAS Studio 2.11.0 or later to write the read list. In XG5000, the FEnet module's driver must be the **XGT server**
 (TCP 2004) and, if its host table is on, this PC's address must be in it ([usage §3-3](docs/usage.md)).
+The largest open point: the manuals do not say in which order the words of a value over several words (DINT, REAL,
+LREAL …) are placed, and the collector reads the low word first — if INT and BOOL read right but REAL or DINT do not,
+that is the reason. The full list of what the manuals leave open is in AAS Studio's usage guide §8 (XGT).
 
 **Real PLCs: waiting for user reports.** S7, MC and XGT were built without a real PLC. If you read one, please tell us
 what you saw with the [PLC field report](https://github.com/waceinc/vexplor-edge/issues/new?template=field_report.md) — maker, series, CPU, firmware, address, the value you expected and the
