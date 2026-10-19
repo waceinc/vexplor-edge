@@ -176,4 +176,8 @@ Revoke the device on the server as well.
   the unit tests on a Windows file system, the package built there, the scripts parsed by Windows PowerShell 5.1, the
   executable's `--version`, and the package installed as a real service against a stand-in server — runs as
   LocalService, writes and sends its queue, starts again after the program is killed, stops with the service, upgrades
-  and uninstalls (`test/windows/service-smoke.ps1`). Not yet installed on a factory PC.
+  and uninstalls (`test/windows/service-smoke.ps1`). First green run: 2026-10-19 on the Windows commit (697cacf) — 52 of 52
+  unit tests, the package built, and every service check `[OK]` (registered once, running as LocalService, delayed
+  automatic start, restart on failure, no byte order mark, key and queue closed to Users, a batch sent, log written,
+  started again after a kill, stopped with no program left, upgrade kept the registration, removed with `-Purge`).
+  Not yet installed on a factory PC.
