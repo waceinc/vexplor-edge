@@ -161,7 +161,7 @@ files (AASX) become the "read list", and the collector starts reading only after
 | Tools | Linux: `curl`, `sha256sum` (or `shasum`), admin rights (`sudo`). Windows: an administrator account — PowerShell 5.1 is part of Windows. No Node.js — the program is one executable |
 | Download | about 44 MB per package (1.0.0) |
 | Outbound | to the server address on 443 (directly or through the site proxy) |
-| To the machines | to the PLC ports — OPC UA 4840, Modbus TCP 502, MQTT 1883/8883, from 1.2.0 S7 102 and the MC port set in the PLC, and from the next release XGT 2004 |
+| To the machines | to the PLC ports — OPC UA 4840, Modbus TCP 502, MQTT 1883/8883, from 1.2.0 S7 102 and the MC port set in the PLC, and from 1.3.0 XGT 2004 |
 | Inbound | **none.** The collector opens no port |
 
 Where to place the PC: [install.md](install.md) §1 (DMZ / office network, or the machine network).
@@ -179,7 +179,7 @@ set where and how a value travels from the equipment to the server's screen, wit
 | Setting | Where | How |
 |---|---|---|
 | Equipment address (endpoint) | AAS Studio — collection link | Field ① of **Create collection link**. Use **the address the factory PC can reach** (§3-4) |
-| Protocol | AAS Studio — collection link | Follows from the address: `opc.tcp://` is OPC UA, `modbus+tcp://` is Modbus TCP, `mqtt://` · `mqtts://` is MQTT, from 1.2.0 `s7://` is S7 and `melsec://` is MC, and from the next release `xgt://` is XGT |
+| Protocol | AAS Studio — collection link | Follows from the address: `opc.tcp://` is OPC UA, `modbus+tcp://` is Modbus TCP, `mqtt://` · `mqtts://` is MQTT, from 1.2.0 `s7://` is S7 and `melsec://` is MC, and from 1.3.0 `xgt://` is XGT |
 | Tag address (PLC address) | AAS Studio — collection link | One per row: NodeId for OPC UA, register number for Modbus, topic for MQTT, the TIA Portal or GX Works address for S7 and MC, the XG5000 address for XGT (§3-3) |
 | Modbus register kind | AAS Studio — collection link | Chosen per row: Holding register · Input register · Coil · Discrete input |
 | Modbus conventional address (`40001` …) | AAS Studio — collection link | Type `40001` and a button "40001 → Holding register #0" appears next to it. It converts only when pressed |
@@ -196,10 +196,10 @@ set where and how a value travels from the equipment to the server's screen, wit
 | Batch interval · queue size | Factory PC — `edge.json` | `flushIntervalMs` · `maxQueuedBatches` · `maxQueueDays` (§11) |
 | Server address · proxy · private CA · OPC UA certificates | Factory PC — `edge.json` | §11 · §12 |
 
-**Vendor protocols read: Siemens S7 and MELSEC MC from 1.2.0, LS ELECTRIC XGT from the next release** (VEXPLOR
+**Vendor protocols read: Siemens S7 and MELSEC MC from 1.2.0, LS ELECTRIC XGT from 1.3.0** (VEXPLOR
 extension bindings, read only — §3-3). Others are not read: turn on the PLC's (or its communication module's) **Modbus TCP server** or
 **OPC UA server** and link to that. The server's read list can also carry HTTP equipment, but VEXPLOR Edge reads OPC UA,
-Modbus TCP, MQTT, from 1.2.0 S7 and MC, and from the next release XGT (HTTP equipment shows "Machine connection error: HTTP is not read by this
+Modbus TCP, MQTT, from 1.2.0 S7 and MC, and from 1.3.0 XGT (HTTP equipment shows "Machine connection error: HTTP is not read by this
 edge yet").
 
 ### 3-2. The whole trip — from the equipment file to the server's screen
@@ -317,7 +317,7 @@ S7 and MC frames are tested against test servers built from the published format
 one line from your own PLC before relying on it. A collector older than 1.2.0 does not read these interfaces and shows
 "Machine connection error: S7 is not read by this edge yet".
 
-**XGT** (next release — AAS Studio's next release; a VEXPLOR extension binding, read only)
+**XGT** (1.3.0 — AAS Studio 2.11.0 or later; a VEXPLOR extension binding, read only)
 
 | Field | Format | Example |
 |---|---|---|
@@ -332,7 +332,7 @@ device fails alone (`AddressOutOfRange (error code 0x0004)`). **In XG5000**, set
 server** (TCP 2004 — what the module serves when nothing else is set); if "Enable host table" is on, add this PC's
 address; one collector takes one of the module's dedicated connections (1 – 16, 3 by default). Open **TCP 2004** from
 this PC to the PLC. The frames follow LS ELECTRIC's "XGT FEnet I/F Module User's Manual" V2.30 and are tested against a
-test server built from it, not yet against a real PLC. A collector older than this release shows "Machine connection
+test server built from it, not yet against a real PLC. A collector older than 1.3.0 shows "Machine connection
 error: XGT is not read by this edge yet".
 
 ### 3-4. Equipment addresses are as seen from the factory PC — when the server is outside the factory

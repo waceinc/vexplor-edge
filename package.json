@@ -1,6 +1,6 @@
 {
   "name": "vexplor-edge",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "VEXPLOR Edge — the remote collector. Reads the PLCs an approved read list names and sends signed batches out over HTTPS (contract vexplor.edge/1)",
   "license": "Apache-2.0",
   "author": "WACE",
