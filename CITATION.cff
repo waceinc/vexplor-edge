@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "VEXPLOR Edge"
+version: 1.2.0
+type: software
+authors:
+  - name: "WACE Inc."
+repository-code: "https://github.com/waceinc/vexplor-edge"
+url: "https://wace.me/en-platform-edge"
+license: Apache-2.0
+doi: 10.5281/zenodo.23485164
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23485164
+    description: "Concept DOI — all versions"
+  - type: doi
+    value: 10.5281/zenodo.23485165
+    description: "Version 1.2.0"
+keywords:
+  - remote collector
+  - Asset Administration Shell
+  - OPC UA
+  - Modbus
+  - MQTT
