@@ -2,6 +2,8 @@
 
 # VEXPLOR Edge
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23485164.svg)](https://doi.org/10.5281/zenodo.23485164)
+
 **The remote collector you put on one factory PC. It reads only the machine values a person approved and sends them
 out over HTTPS — outbound only.** Nothing connects into the factory, there is no remote stop, and it never writes to a
 PLC.
