@@ -55,7 +55,7 @@ Cloud receives the same contract too (opened to design-partner companies first, 
 
 | | |
 |---|---|
-| **Read only** | No code writes to a PLC or controller. It reads with the same code as the AAS Studio server's collector (OPC UA, Modbus TCP, MQTT) |
+| **Read only** | No code writes to a PLC or controller. It reads with the same code as the AAS Studio server's collector (OPC UA, Modbus TCP, MQTT, and from 1.2.0 S7 and MC — [below](#protocols)) |
 | **Outbound only** | It goes out to the server address on 443 (or the site proxy) and nowhere else. It opens no port; there is no way in |
 | **Approved list only** | It reads only the tags in the list a person approved on the server. A changed list waits for a new approval |
 | **Every request signed** | On registering it makes an Ed25519 key on the PC and signs every request. The private key never leaves the PC |
@@ -63,6 +63,24 @@ Cloud receives the same contract too (opened to design-partner companies first, 
 | **Send changes only (optional)** | OPC UA subscriptions with a deadband. 6 tags, 1 s, 5 minutes measured: 283 KB → 88 KB |
 | **No remote stop** | The server sends no commands. A revoked device stops sending by itself and keeps its queue |
 | **No auto-install** | It can report a newer signed release; a person downloads and installs it |
+
+## Protocols
+
+| Protocol | Equipment | Port from this PC to the PLC | From |
+|---|---|---|---|
+| OPC UA | OPC UA servers (PLC, gateway, SCADA) | Usually 4840 | 1.0.0 |
+| Modbus TCP | Modbus TCP servers | 502 | 1.0.0 |
+| MQTT | MQTT brokers (the last value of a topic) | 1883 · 8883 (TLS) | 1.0.0 |
+| **S7** | Siemens S7-300 · 400 · 1200 · 1500 — S7comm over ISO-on-TCP | **102** | 1.2.0 |
+| **MC** | MELSEC Q · L · iQ-R · iQ-F — MC protocol, 3E frame, binary code | **The port set in the PLC's Ethernet settings** (no fixed number) | 1.2.0 |
+
+S7 and MC are **VEXPLOR extension bindings, read only**: AID 1.1 has no binding for them, so AAS Studio (2.10.0 or
+later) writes the address in the AID's standard places and marks the interface with its own binding IRI. Only reading
+frames exist in the code (S7 Read Var, MC Batch Read). The frames are tested against test servers built from the
+published formats (RFC 1006, ISO 8073, the MELSEC communication protocol reference) — **not yet against real PLCs.**
+S7-1200 / 1500 need "Permit access with PUT/GET" on the CPU and "Optimized block access" off on each DB read. An older
+collector (1.1.0 or earlier) given an S7 or MC interface does not read it and reports why in its status
+(`S7 is not read by this edge yet`); its other machines keep being read.
 
 ## Install
 
@@ -82,7 +100,7 @@ Full guide: [docs/install.md](docs/install.md) · End to end: [docs/usage.md](do
 ## Documents
 
 - **[User guide](docs/usage.md)** — how equipment links and collection work (what is set where, OPC UA · Modbus TCP · MQTT
-  examples), from the first connection to approval, reading a collector's state, pause and
+  · S7 · MC examples), from the first connection to approval, reading a collector's state, pause and
   revoke; the service, log and every configuration key on the factory PC; proxy, certificates, PLC passwords, sending
   changes only, upgrading and troubleshooting, with screen captures (19 sections)
 - [Install and run](docs/install.md) — layouts (DMZ, equipment network), every destination it connects to, passwords

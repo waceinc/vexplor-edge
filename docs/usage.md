@@ -161,7 +161,7 @@ files (AASX) become the "read list", and the collector starts reading only after
 | Tools | Linux: `curl`, `sha256sum` (or `shasum`), admin rights (`sudo`). Windows: an administrator account — PowerShell 5.1 is part of Windows. No Node.js — the program is one executable |
 | Download | about 44 MB per package (1.0.0) |
 | Outbound | to the server address on 443 (directly or through the site proxy) |
-| To the machines | to the PLC ports — OPC UA 4840, Modbus TCP 502, MQTT 1883/8883 |
+| To the machines | to the PLC ports — OPC UA 4840, Modbus TCP 502, MQTT 1883/8883, and from 1.2.0 S7 102 and the MC port set in the PLC |
 | Inbound | **none.** The collector opens no port |
 
 Where to place the PC: [install.md](install.md) §1 (DMZ / office network, or the machine network).
@@ -179,12 +179,12 @@ set where and how a value travels from the equipment to the server's screen, wit
 | Setting | Where | How |
 |---|---|---|
 | Equipment address (endpoint) | AAS Studio — collection link | Field ① of **Create collection link**. Use **the address the factory PC can reach** (§3-4) |
-| Protocol | AAS Studio — collection link | Follows from the address: `opc.tcp://` is OPC UA, `modbus+tcp://` is Modbus TCP, `mqtt://` · `mqtts://` is MQTT |
-| Tag address (PLC address) | AAS Studio — collection link | One per row: NodeId for OPC UA, register number for Modbus, topic for MQTT (§3-3) |
+| Protocol | AAS Studio — collection link | Follows from the address: `opc.tcp://` is OPC UA, `modbus+tcp://` is Modbus TCP, `mqtt://` · `mqtts://` is MQTT, and from 1.2.0 `s7://` is S7 and `melsec://` is MC |
+| Tag address (PLC address) | AAS Studio — collection link | One per row: NodeId for OPC UA, register number for Modbus, topic for MQTT, the TIA Portal or GX Works address for S7 and MC (§3-3) |
 | Modbus register kind | AAS Studio — collection link | Chosen per row: Holding register · Input register · Coil · Discrete input |
 | Modbus conventional address (`40001` …) | AAS Studio — collection link | Type `40001` and a button "40001 → Holding register #0" appears next to it. It converts only when pressed |
 | Modbus register count (quantity) | AAS Studio — collection link | Follows from the data type (1, 2 or 4). To read a different count, add `?quantity=2` to the address |
-| Data type | AAS Studio — collection link | Modbus: unsignedShort · short · unsignedInt · int · float · double · boolean. OPC UA and MQTT: float · integer · string · boolean |
+| Data type | AAS Studio — collection link | Modbus: unsignedShort · short · unsignedInt · int · float · double · boolean. OPC UA and MQTT: float · integer · string · boolean. S7 and MC: the PLC type after the address (`DB10.DBD4:REAL`) |
 | Modbus byte and word order | AAS Studio — collection link | Picked per row from `ABCD` · `CDAB` · `BADC` · `DCBA` (AAS Studio 2.8.0 and later). The default `ABCD` is high byte first, high word first (§3-3) |
 | Unit | AAS Studio — collection link | The "Unit" field on each row (optional, AAS Studio 2.8.0 and later). Earlier versions took it through the API only |
 | Tag name | AAS Studio — collection link | Name it like the model element (idShort), so the standard API puts the value on that element |
@@ -196,10 +196,11 @@ set where and how a value travels from the equipment to the server's screen, wit
 | Batch interval · queue size | Factory PC — `edge.json` | `flushIntervalMs` · `maxQueuedBatches` · `maxQueueDays` (§11) |
 | Server address · proxy · private CA · OPC UA certificates | Factory PC — `edge.json` | §11 · §12 |
 
-**There are no vendor-specific protocols.** Protocols such as LS XGT's FEnet are not read. Turn on the PLC's (or its
-communication module's) **Modbus TCP server** or **OPC UA server** and link to that. The server's read list can also
-carry HTTP equipment, but VEXPLOR Edge 1.0.1 reads only OPC UA, Modbus TCP and MQTT (HTTP equipment shows "Machine
-connection error: HTTP is not read by this edge yet").
+**Two vendor protocols are read, from 1.2.0: Siemens S7 and MELSEC MC** (VEXPLOR extension bindings, read only — §3-3).
+Others, such as LS XGT's FEnet, are not read: turn on the PLC's (or its communication module's) **Modbus TCP server** or
+**OPC UA server** and link to that. The server's read list can also carry HTTP equipment, but VEXPLOR Edge reads OPC UA,
+Modbus TCP, MQTT, and from 1.2.0 S7 and MC (HTTP equipment shows "Machine connection error: HTTP is not read by this
+edge yet").
 
 ### 3-2. The whole trip — from the equipment file to the server's screen
 
@@ -285,6 +286,36 @@ taken from the message body like this:
 | `{"value": 61.2}` | The `value` field |
 | Text that is not JSON, such as `RUN` | The text as is |
 | JSON without `value`, such as `{"temp": 61.2}` | The whole body as text — refused by the server (`TypeMismatch`) when the data type is float or integer |
+
+**S7** (1.2.0 — AAS Studio 2.10.0 or later; a VEXPLOR extension binding, read only)
+
+| Field | Format | Example |
+|---|---|---|
+| Endpoint | `s7://host[:port]?rack=R&slot=S` — port defaults to 102; `rack=0&slot=1` fits S7-1200 / 1500, an S7-300 usually needs `slot=2` | `s7://192.168.10.40?rack=0&slot=1` |
+| Tag address | The address as TIA Portal / STEP 7 shows it, then optionally `:TYPE` — DB, M, I (E), Q (A) | `DB10.DBD4:REAL` · `DB1.DBX0.3` · `M10.3` · `MW20:INT` · `IB0` · `DB2.DBB0:STRING[20]` |
+| Data type | IEC 61131-3: BOOL · BYTE · SINT · USINT · CHAR · WORD · INT · UINT · DWORD · DINT · UDINT · REAL · LREAL · LINT · ULINT · STRING[n]. Without one, the size letter decides (X BOOL · B BYTE · W WORD · D DWORD) | |
+
+Values are read big-endian, as the PLC holds them. The collector packs the addresses into as few requests as the
+negotiated PDU allows (at most 20 per request). A missing DB or an address past its end fails alone, with its reason.
+**S7-1200 / 1500:** turn on "Permit access with PUT/GET communication" in the CPU properties and turn off "Optimized
+block access" for each DB read — otherwise the CPU refuses and the tag's row says so. Optimized blocks (symbolic
+access), timers, counters and the CPU's protection password are not supported. Open **TCP 102** from this PC to the PLC.
+
+**MC** (1.2.0 — AAS Studio 2.10.0 or later; a VEXPLOR extension binding, read only)
+
+| Field | Format | Example |
+|---|---|---|
+| Endpoint | `melsec://host:port?series=Q` — **the port is required** (the one opened in the PLC's Ethernet settings); `series` = `Q` (also L, the default) · `iQ-R` · `iQ-F` | `melsec://192.168.10.41:5000?series=Q` |
+| Tag address | Device and number as GX Works shows them, then optionally `:TYPE` — D · W · R (words), M · X · Y (bits), a bit of a word `D10.3` | `D100` · `D200:REAL` · `D10.3` · `M50` · `X1F` · `W1A:DINT` · `R0:STRING[10]` |
+| Data type | Words: INT (default) · UINT · WORD · DINT · UDINT · DWORD · REAL · LREAL · LINT · ULINT · STRING[n]. Bits: BOOL | |
+
+`X` · `Y` · `W` are hexadecimal (on iQ-F `X` · `Y` are octal — write `?series=iQ-F`); `D` · `M` · `R` decimal. Values
+over several words are read low word first. The PLC's port must be set for **binary** code and the 3E frame (iQ-F:
+SLMP). Neighbouring addresses on one device are read in one request. Open **that port** from this PC to the PLC.
+
+S7 and MC frames are tested against test servers built from the published formats — not yet against real PLCs. Read
+one line from your own PLC before relying on it. A collector older than 1.2.0 does not read these interfaces and shows
+"Machine connection error: S7 is not read by this edge yet".
 
 ### 3-4. Equipment addresses are as seen from the factory PC — when the server is outside the factory
 
@@ -961,7 +992,7 @@ Every destination it connects to:
 | Destination | Why | When |
 |---|---|---|
 | The configured server on 443 (or `proxy`) | Registration · read list · batches | Always |
-| PLC addresses in the approved list (OPC UA · Modbus TCP · MQTT) | Reading values | After approval |
+| PLC addresses in the approved list (OPC UA · Modbus TCP · MQTT · S7 · MC) | Reading values | After approval |
 | `update.manifestUrl` | Update notice, once a day | Only if configured |
 | GitHub releases | Downloading the package (`get.sh`) | Only while installing |
 

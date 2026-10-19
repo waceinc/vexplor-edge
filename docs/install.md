@@ -12,7 +12,7 @@ Studio, VEXPLOR Logic Studio Cloud).
 | | A. DMZ / office network | B. Equipment network |
 |---|---|---|
 | The PC sits | Between the office and equipment networks, reaching both | On the equipment network, with an outbound route to the server (often through a proxy) |
-| Firewall towards the equipment | The PC → PLC ports (OPC UA 4840, Modbus 502, MQTT 1883/8883) | Nothing new |
+| Firewall towards the equipment | The PC → PLC ports (OPC UA 4840, Modbus 502, MQTT 1883/8883; from 1.2.0 S7 102 and the MC port set in the PLC) | Nothing new |
 | Firewall towards the outside | The PC → the server on 443 (or the proxy) | The PC → the proxy (or the server on 443) |
 | Inbound to the PC | **None** | **None** |
 
@@ -24,7 +24,7 @@ through the site proxy. In both, nothing connects in.
 | Destination | Why | When |
 |---|---|---|
 | The server address in the configuration, port 443 (or through `proxy`) | Read list, batches, registration | Always |
-| The PLC endpoints in the approved read list (OPC UA, Modbus TCP, MQTT) | Reading values | After approval |
+| The PLC endpoints in the approved read list (OPC UA, Modbus TCP, MQTT; from 1.2.0 S7 and MC) | Reading values | After approval |
 | `update.manifestUrl` | Release notice, once a day | Only if configured |
 
 There is nothing else. The tests check this (STD-009 T9) by recording every connection attempt.

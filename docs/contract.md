@@ -95,7 +95,7 @@ What to read, already resolved from the AAS by the server. Response **200** `vex
   different `readListRevision`). A server may give a shorter value while the device waits for approval (AAS Studio gives
   10 s — an approval reaches the device within seconds).
 - `interfaces[]` — one per equipment connection: `interfaceId`, `packageId`, `aasId`, `globalAssetId`,
-  `interfaceName` (the AID interface), `protocol` (`OPCUA` · `MODBUS` · `MQTT` · `HTTP`), `endpoint` (AID `base`),
+  `interfaceName` (the AID interface), `protocol` (`OPCUA` · `MODBUS` · `MQTT` · `HTTP` · `S7` · `MC`), `endpoint` (AID `base`),
   `security`, `intervalMs`, and `tags[]` — `tagId`, `propertyName`, `address` (AID `href`), optional `key`, `type`,
   `unit`, `fields` (the remaining AID form fields, as text, by name), and optional `intervalMs` that overrides the
   interface's for that tag.
@@ -104,6 +104,19 @@ What to read, already resolved from the AAS by the server. Response **200** `vex
   installer stored on the edge machine; the edge looks it up locally.
 
 An interface whose protocol the edge does not support is skipped and reported in the next batch's `status`.
+
+`S7` and `MC` were added to the list in edge 1.2.0 and AAS Studio 2.10.0 without a new contract version — the change
+is additive in the sense of this section: an older edge does not read such an interface, reports why in
+`status.interfaces[].lastError` (`S7 is not read by this edge yet`) and keeps reading its other interfaces. Both are
+VEXPLOR extension bindings, not AID 1.1 bindings, and read only:
+
+| `protocol` | Equipment | `endpoint` | `address` |
+| --- | --- | --- | --- |
+| `S7` | Siemens S7-300 · 400 · 1200 · 1500, S7comm over ISO-on-TCP (TCP 102) | `s7://host[:102]?rack=0&slot=1` | As TIA Portal / STEP 7 shows it, optional `:TYPE` — `DB10.DBD4:REAL`, `M10.3`, `DB2.DBB0:STRING[20]` |
+| `MC` | MELSEC Q · L · iQ-R · iQ-F, MC protocol 3E binary (the port set in the PLC) | `melsec://host:port?series=Q` (`Q` · `iQ-R` · `iQ-F`) | As GX Works shows it, optional `:TYPE` — `D100`, `D200:REAL`, `D10.3`, `X1F` |
+
+`security.mode` is `None` and there is no `credentialRef`. The frames are tested against test servers built from the
+published formats, not yet against real PLCs.
 
 ### 4.1 Tag hints (added in 2.5.0 — optional, advisory)
 
