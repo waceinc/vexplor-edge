@@ -33,10 +33,10 @@
     "pack:release": "npm run build && node scripts/pack.mjs --arm64 --windows"
   },
   "dependencies": {
-    "@aas/collector": "https://github.com/waceinc/vexplor-aas/releases/download/v2.10.0/aas-collector-2.10.0.tgz",
-    "@aas/core": "https://github.com/waceinc/vexplor-aas/releases/download/v2.10.0/aas-core-2.10.0.tgz",
-    "@aas/fieldbus": "https://github.com/waceinc/vexplor-aas/releases/download/v2.10.0/aas-fieldbus-2.10.0.tgz",
-    "@aas/opcua": "https://github.com/waceinc/vexplor-aas/releases/download/v2.10.0/aas-opcua-2.10.0.tgz"
+    "@aas/collector": "https://github.com/waceinc/vexplor-aas/releases/download/v2.11.0/aas-collector-2.11.0.tgz",
+    "@aas/core": "https://github.com/waceinc/vexplor-aas/releases/download/v2.11.0/aas-core-2.11.0.tgz",
+    "@aas/fieldbus": "https://github.com/waceinc/vexplor-aas/releases/download/v2.11.0/aas-fieldbus-2.11.0.tgz",
+    "@aas/opcua": "https://github.com/waceinc/vexplor-aas/releases/download/v2.11.0/aas-opcua-2.11.0.tgz"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
