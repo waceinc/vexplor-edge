@@ -19,26 +19,26 @@ npm ci && npm run typecheck && npm run build && npm test
 AAS_DIR=../vexplor-aas npm run test:interop   # 빌드한 waceinc/vexplor-aas 사본이 필요합니다
 ```
 
-## 판을 올릴 때
+## 버전을 올릴 때
 
-`EDGE_VERSION`(`src/version.ts`)이 오르면 수집기를 설명하는 곳을 같은 릴리스에서 모두 고칩니다 — 하나라도 옛 판이거나 바뀐 것이
+`EDGE_VERSION`(`src/version.ts`)이 오르면 수집기를 설명하는 곳을 같은 릴리스에서 모두 고칩니다 — 하나라도 옛 버전이거나 바뀐 것이
 빠져 있으면 릴리스가 끝난 것이 아닙니다.
 
-1. **판 표기** — `src/version.ts` · `package.json` · 두 README 의 「판」 표.
-2. **바뀐 것** — README 「판」 표의 새 판 행(「바뀐 것」 칸을 비우지 않는다)과 그 기능 안내(사용법 · `docs/install.md` · `docs/설치.md` · 규격), 영어와 한국어.
-   wace.me Edge 페이지의 「판마다 바뀐 것」 표(`wace-home/scripts/build-edge-page.py` 의 `chg`, 국 · 영 · 일)와 프로젝트 페이지 「판」 절에도
-   같은 행을 위에 더합니다 — 지난 판 행은 지우지 않고 이어서 쌓습니다. 매일 점검이 이 행까지 대조합니다.
+1. **버전 표기** — `src/version.ts` · `package.json` · 두 README 의 「버전」 표.
+2. **바뀐 것** — README 「버전」 표의 새 버전 행(「바뀐 것」 칸을 비우지 않는다)과 그 기능 안내(사용법 · `docs/install.md` · `docs/설치.md` · 규격), 영어와 한국어.
+   wace.me Edge 페이지의 「버전마다 바뀐 것」 표(`wace-home/scripts/build-edge-page.py` 의 `chg`, 국 · 영 · 일)와 프로젝트 페이지 「버전」 절에도
+   같은 행을 위에 더합니다 — 지난 버전 행은 지우지 않고 이어서 쌓습니다. 매일 점검이 이 행까지 대조합니다.
 3. **릴리스** — Linux 나 macOS 에서 `npm run pack:release`(Linux x64 · arm64 와 Windows x64 를 만듭니다. Windows 에서는 Windows
-   꾸러미만 만들 수 있습니다), 태그 `vX.Y.Z`, Linux 꾸러미 둘 · `vexplor-edge-X.Y.Z-win-x64.zip` · `get.sh` · `get.ps1` ·
+   패키지만 만들 수 있습니다), 태그 `vX.Y.Z`, Linux 패키지 둘 · `vexplor-edge-X.Y.Z-win-x64.zip` · `get.sh` · `get.ps1` ·
    `SHA256SUMS` 여섯 개를 모두 첨부(`SHA256SUMS` 에 나머지 다섯이 들어 있습니다). 한 줄 설치는 늘 `releases/latest/download/get.sh` 와
-   `…/get.ps1` 을 받고, 각 파일은 자기 릴리스 판에 고정돼 있습니다. 릴리스 커밋에서 CI 작업 `windows`(꾸러미를 실제 Windows 서비스로
-   설치)가 통과해야 합니다 — Mac · Linux 에서는 Windows 꾸러미를 시험할 수 없습니다. Windows 실행 파일은 코드 서명이 없고, 확인은
+   `…/get.ps1` 을 받고, 각 파일은 자기 릴리스 버전에 고정돼 있습니다. 릴리스 커밋에서 CI 작업 `windows`(패키지를 실제 Windows 서비스로
+   설치)가 통과해야 합니다 — Mac · Linux 에서는 Windows 패키지를 시험할 수 없습니다. Windows 실행 파일은 코드 서명이 없고, 확인은
    `SHA256SUMS` 로 합니다.
 4. **웹사이트** — wace.me 의 VEXPLOR Edge 페이지(국 · 영 · 일)와 `gh-pages` 브랜치의 프로젝트 페이지
-   (waceinc.github.io/vexplor-edge): 판 표기와 바뀐 것. 판을 올리는 사람이 코드를 보고 직접 작성합니다. 매일 점검이 최신 릴리스와
+   (waceinc.github.io/vexplor-edge): 버전 표기와 바뀐 것. 버전을 올리는 사람이 코드를 보고 직접 작성합니다. 매일 점검이 최신 릴리스와
    README · 웹사이트를 대조합니다.
-   검색과 AI 답변은 wace.me 의 두 곳을 더 읽습니다 — 제품 페이지 구조화 데이터의 `softwareVersion` 과 `/opensource` 프로젝트 카드의 판.
-   둘 다 `wace-home/scripts/oss_seo.py` 의 `VERSIONS` 에서 만들어집니다(명령 4개는 사이트 저장소 README, Edge 페이지 본문의 판은 `build-edge-page.py`). 배포 전에 두 번 실행해
+   검색과 AI 답변은 wace.me 의 두 곳을 더 읽습니다 — 제품 페이지 구조화 데이터의 `softwareVersion` 과 `/opensource` 프로젝트 카드의 버전.
+   둘 다 `wace-home/scripts/oss_seo.py` 의 `VERSIONS` 에서 만들어집니다(명령 4개는 사이트 저장소 README, Edge 페이지 본문의 버전은 `build-edge-page.py`). 배포 전에 두 번 실행해
    두 번째에 바뀌는 것이 없는지 보고, 배포 뒤 바뀐 주소를 IndexNow 로 알립니다.
 
 기여한 내용은 이 저장소의 [Apache License 2.0](LICENSE)으로 배포됩니다.
