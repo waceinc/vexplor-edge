@@ -7,6 +7,9 @@
  *    tags are grouped by their interval (a tag's own intervalMs overrides the interface's).
  * Important: a reading that has not arrived yet (`pending`) makes no sample — no fake value in the time series.
  * Important: a login (`credentialRef`) is looked up in the credentials file for OPC UA and, since 1.1.0, MQTT.
+ * Important: S7 and MC (since 1.2.0) are VEXPLOR extension bindings, read only — Read Var and Batch Read are the only
+ *    frames their readers build. They have no login; the readers connect on the first read, so a PLC that is off makes
+ *    failed reads (and the link's reconnect), not a failed open.
  */
 import type { AidInterface, ProtocolReader, ReadResult } from '@aas/collector';
 
@@ -24,7 +27,7 @@ export interface ReadListTag {
 export interface ReadListInterface {
   interfaceId: string;
   interfaceName: string;
-  protocol: 'OPCUA' | 'MODBUS' | 'MQTT' | 'HTTP';
+  protocol: 'OPCUA' | 'MODBUS' | 'MQTT' | 'HTTP' | 'S7' | 'MC';
   endpoint: string;
   security: { mode: string; policy?: string; credentialRef?: string };
   intervalMs: number;
@@ -80,6 +83,8 @@ export async function openReader(iface: ReadListInterface, options: OpenOptions)
     });
   }
   if (iface.protocol === 'MODBUS') return (await import('@aas/fieldbus')).ModbusReader.connect(toAidInterface(iface));
+  if (iface.protocol === 'S7') return (await import('@aas/fieldbus')).S7Reader.connect(toAidInterface(iface));
+  if (iface.protocol === 'MC') return (await import('@aas/fieldbus')).McReader.connect(toAidInterface(iface));
   if (iface.protocol === 'MQTT') {
     const ref = iface.security.credentialRef;
     const user = ref ? options.credentials.get(ref) : undefined;

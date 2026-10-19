@@ -6,7 +6,8 @@
  *     vexplor-edge --version
  *
  * Logs one JSON object per line on stdout (time, level, message) — a service manager or log shipper reads them as is.
- * SIGINT / SIGTERM close the readers and exit; nothing else can stop it (there is no remote stop).
+ * SIGINT / SIGTERM (Windows: Ctrl+C / Ctrl+Break) close the readers and exit; nothing else can stop it (there is no
+ * remote stop).
  */
 import { EdgeAgent } from './agent.js';
 import { loadCredentials, loadEdgeConfig } from './config.js';
@@ -56,6 +57,8 @@ export async function main(args: readonly string[]): Promise<number> {
     const end = (): void => resolve();
     process.once('SIGINT', end);
     process.once('SIGTERM', end);
+    // Windows has no SIGTERM: the service wrapper (WinSW) stops the program with Ctrl+C (SIGINT); Ctrl+Break is SIGBREAK
+    if (process.platform === 'win32') process.once('SIGBREAK', end);
   });
   await agent.stop();
   return 0;

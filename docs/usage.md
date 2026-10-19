@@ -157,11 +157,11 @@ files (AASX) become the "read list", and the collector starts reading only after
 
 | Item | Details |
 |---|---|
-| Operating system | Linux x64 or arm64 with systemd. Windows is in preparation — until then use a Linux PC or a Linux VM on a Windows server |
-| Tools | `curl`, `sha256sum` (or `shasum`), admin rights (`sudo`). No Node.js — the program is one executable |
+| Operating system | Linux x64 or arm64 with systemd, or (1.2.0 and later) Windows 10 / Server 2016 or later, x64, with Windows PowerShell 5.1 |
+| Tools | Linux: `curl`, `sha256sum` (or `shasum`), admin rights (`sudo`). Windows: an administrator account — PowerShell 5.1 is part of Windows. No Node.js — the program is one executable |
 | Download | about 44 MB per package (1.0.0) |
 | Outbound | to the server address on 443 (directly or through the site proxy) |
-| To the machines | to the PLC ports — OPC UA 4840, Modbus TCP 502, MQTT 1883/8883 |
+| To the machines | to the PLC ports — OPC UA 4840, Modbus TCP 502, MQTT 1883/8883, and from 1.2.0 S7 102 and the MC port set in the PLC |
 | Inbound | **none.** The collector opens no port |
 
 Where to place the PC: [install.md](install.md) §1 (DMZ / office network, or the machine network).
@@ -179,12 +179,12 @@ set where and how a value travels from the equipment to the server's screen, wit
 | Setting | Where | How |
 |---|---|---|
 | Equipment address (endpoint) | AAS Studio — collection link | Field ① of **Create collection link**. Use **the address the factory PC can reach** (§3-4) |
-| Protocol | AAS Studio — collection link | Follows from the address: `opc.tcp://` is OPC UA, `modbus+tcp://` is Modbus TCP, `mqtt://` · `mqtts://` is MQTT |
-| Tag address (PLC address) | AAS Studio — collection link | One per row: NodeId for OPC UA, register number for Modbus, topic for MQTT (§3-3) |
+| Protocol | AAS Studio — collection link | Follows from the address: `opc.tcp://` is OPC UA, `modbus+tcp://` is Modbus TCP, `mqtt://` · `mqtts://` is MQTT, and from 1.2.0 `s7://` is S7 and `melsec://` is MC |
+| Tag address (PLC address) | AAS Studio — collection link | One per row: NodeId for OPC UA, register number for Modbus, topic for MQTT, the TIA Portal or GX Works address for S7 and MC (§3-3) |
 | Modbus register kind | AAS Studio — collection link | Chosen per row: Holding register · Input register · Coil · Discrete input |
 | Modbus conventional address (`40001` …) | AAS Studio — collection link | Type `40001` and a button "40001 → Holding register #0" appears next to it. It converts only when pressed |
 | Modbus register count (quantity) | AAS Studio — collection link | Follows from the data type (1, 2 or 4). To read a different count, add `?quantity=2` to the address |
-| Data type | AAS Studio — collection link | Modbus: unsignedShort · short · unsignedInt · int · float · double · boolean. OPC UA and MQTT: float · integer · string · boolean |
+| Data type | AAS Studio — collection link | Modbus: unsignedShort · short · unsignedInt · int · float · double · boolean. OPC UA and MQTT: float · integer · string · boolean. S7 and MC: the PLC type after the address (`DB10.DBD4:REAL`) |
 | Modbus byte and word order | AAS Studio — collection link | Picked per row from `ABCD` · `CDAB` · `BADC` · `DCBA` (AAS Studio 2.8.0 and later). The default `ABCD` is high byte first, high word first (§3-3) |
 | Unit | AAS Studio — collection link | The "Unit" field on each row (optional, AAS Studio 2.8.0 and later). Earlier versions took it through the API only |
 | Tag name | AAS Studio — collection link | Name it like the model element (idShort), so the standard API puts the value on that element |
@@ -196,10 +196,11 @@ set where and how a value travels from the equipment to the server's screen, wit
 | Batch interval · queue size | Factory PC — `edge.json` | `flushIntervalMs` · `maxQueuedBatches` · `maxQueueDays` (§11) |
 | Server address · proxy · private CA · OPC UA certificates | Factory PC — `edge.json` | §11 · §12 |
 
-**There are no vendor-specific protocols.** Protocols such as LS XGT's FEnet are not read. Turn on the PLC's (or its
-communication module's) **Modbus TCP server** or **OPC UA server** and link to that. The server's read list can also
-carry HTTP equipment, but VEXPLOR Edge 1.0.1 reads only OPC UA, Modbus TCP and MQTT (HTTP equipment shows "Machine
-connection error: HTTP is not read by this edge yet").
+**Two vendor protocols are read, from 1.2.0: Siemens S7 and MELSEC MC** (VEXPLOR extension bindings, read only — §3-3).
+Others, such as LS XGT's FEnet, are not read: turn on the PLC's (or its communication module's) **Modbus TCP server** or
+**OPC UA server** and link to that. The server's read list can also carry HTTP equipment, but VEXPLOR Edge reads OPC UA,
+Modbus TCP, MQTT, and from 1.2.0 S7 and MC (HTTP equipment shows "Machine connection error: HTTP is not read by this
+edge yet").
 
 ### 3-2. The whole trip — from the equipment file to the server's screen
 
@@ -285,6 +286,36 @@ taken from the message body like this:
 | `{"value": 61.2}` | The `value` field |
 | Text that is not JSON, such as `RUN` | The text as is |
 | JSON without `value`, such as `{"temp": 61.2}` | The whole body as text — refused by the server (`TypeMismatch`) when the data type is float or integer |
+
+**S7** (1.2.0 — AAS Studio 2.10.0 or later; a VEXPLOR extension binding, read only)
+
+| Field | Format | Example |
+|---|---|---|
+| Endpoint | `s7://host[:port]?rack=R&slot=S` — port defaults to 102; `rack=0&slot=1` fits S7-1200 / 1500, an S7-300 usually needs `slot=2` | `s7://192.168.10.40?rack=0&slot=1` |
+| Tag address | The address as TIA Portal / STEP 7 shows it, then optionally `:TYPE` — DB, M, I (E), Q (A) | `DB10.DBD4:REAL` · `DB1.DBX0.3` · `M10.3` · `MW20:INT` · `IB0` · `DB2.DBB0:STRING[20]` |
+| Data type | IEC 61131-3: BOOL · BYTE · SINT · USINT · CHAR · WORD · INT · UINT · DWORD · DINT · UDINT · REAL · LREAL · LINT · ULINT · STRING[n]. Without one, the size letter decides (X BOOL · B BYTE · W WORD · D DWORD) | |
+
+Values are read big-endian, as the PLC holds them. The collector packs the addresses into as few requests as the
+negotiated PDU allows (at most 20 per request). A missing DB or an address past its end fails alone, with its reason.
+**S7-1200 / 1500:** turn on "Permit access with PUT/GET communication" in the CPU properties and turn off "Optimized
+block access" for each DB read — otherwise the CPU refuses and the tag's row says so. Optimized blocks (symbolic
+access), timers, counters and the CPU's protection password are not supported. Open **TCP 102** from this PC to the PLC.
+
+**MC** (1.2.0 — AAS Studio 2.10.0 or later; a VEXPLOR extension binding, read only)
+
+| Field | Format | Example |
+|---|---|---|
+| Endpoint | `melsec://host:port?series=Q` — **the port is required** (the one opened in the PLC's Ethernet settings); `series` = `Q` (also L, the default) · `iQ-R` · `iQ-F` | `melsec://192.168.10.41:5000?series=Q` |
+| Tag address | Device and number as GX Works shows them, then optionally `:TYPE` — D · W · R (words), M · X · Y (bits), a bit of a word `D10.3` | `D100` · `D200:REAL` · `D10.3` · `M50` · `X1F` · `W1A:DINT` · `R0:STRING[10]` |
+| Data type | Words: INT (default) · UINT · WORD · DINT · UDINT · DWORD · REAL · LREAL · LINT · ULINT · STRING[n]. Bits: BOOL | |
+
+`X` · `Y` · `W` are hexadecimal (on iQ-F `X` · `Y` are octal — write `?series=iQ-F`); `D` · `M` · `R` decimal. Values
+over several words are read low word first. The PLC's port must be set for **binary** code and the 3E frame (iQ-F:
+SLMP). Neighbouring addresses on one device are read in one request. Open **that port** from this PC to the PLC.
+
+S7 and MC frames are tested against test servers built from the published formats — not yet against real PLCs. Read
+one line from your own PLC before relying on it. A collector older than 1.2.0 does not read these interfaces and shows
+"Machine connection error: S7 is not read by this edge yet".
 
 ### 3-4. Equipment addresses are as seen from the factory PC — when the server is outside the factory
 
@@ -523,6 +554,19 @@ Options you can add:
 | `--name "Line 1"` | Name shown on the server. Default: the PC's hostname |
 | `--no-service` | Do not register a service (tests · containers) |
 
+**On a Windows PC (1.2.0 and later)** — choose the **Windows** tab above the command. Open a Command Prompt or PowerShell
+with **Run as administrator** (right-click) and paste:
+
+```bat
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor 3072; & ([scriptblock]::Create((irm https://github.com/waceinc/vexplor-edge/releases/latest/download/get.ps1))) -Server https://aas.factory-cloud.example -Code AA6B-CYFF-DWZE"
+```
+
+It does the same five things: the `win-x64` package from the latest release, the `SHA256SUMS` check, the program in
+`C:\Program Files\VEXPLOR Edge` and the configuration in `C:\ProgramData\VEXPLOR Edge\edge.json`, the key and the
+registration, and the Windows service `vexplor-edge` (automatic start, restarted after a failure). It changes no
+execution policy and needs nothing installed besides Windows. The options are the same with a PowerShell spelling —
+`-Proxy` · `-CaFile` · `-CredentialsFile` · `-Name` · `-NoService`. Details: [install.md — Windows](install.md#windows).
+
 ### 5-5. Check the connection
 
 The moment the PC registers, the card shows it — while waiting it reads the device list every 3 s. Press **Done**; a
@@ -681,6 +725,21 @@ The log is one JSON object per line (time, level, message). Normal lines:
 The service runs as its own account `vexplor-edge` with reduced rights — no new privileges, a read-only system, and
 `/var/lib/vexplor-edge` as the only place it can write.
 
+**On Windows** (elevated PowerShell):
+
+| To | Command |
+|---|---|
+| See if it runs | `Get-Service vexplor-edge` |
+| Follow the log | `Get-Content -Wait "C:\ProgramData\VEXPLOR Edge\logs\vexplor-edge-service.out.log"` |
+| Restart (after a configuration change) | `Restart-Service vexplor-edge` |
+| Stop | `Stop-Service vexplor-edge` |
+| Version | `& "C:\Program Files\VEXPLOR Edge\vexplor-edge.exe" --version` |
+
+The program is in `C:\Program Files\VEXPLOR Edge`; `edge.json`, `ca.pem`, `credentials.json` and the `state\` folder
+(key, queue, refused batches, OPC UA certificates) are in `C:\ProgramData\VEXPLOR Edge`. The service runs as
+`NT AUTHORITY\LocalService`: it reads the configuration and can write only `state\` and `logs\`; ordinary users cannot
+read the key. The full table: [install.md — Windows](install.md#windows).
+
 ## 11. The configuration file `edge.json`
 
 The installer writes three keys:
@@ -813,6 +872,9 @@ sudo systemctl restart vexplor-edge
 /opt/vexplor-edge/vexplor-edge --version
 ```
 
+**On Windows** — the one line from the server's screen with `-Upgrade` in place of `-Server … -Code …` (elevated):
+it fetches the latest release, checks it, stops the service, replaces the program and starts it again.
+
 The version on the server screen changes with the next batch. What changed in each version:
 [Releases](https://github.com/waceinc/vexplor-edge/releases).
 
@@ -838,6 +900,11 @@ sudo ./install.sh --server https://aas.factory-cloud.example --code AA6B-CYFF-DW
 The code is the `--code` of the command the screen made. `install.sh` takes the same options as `get.sh` (`--proxy` ·
 `--ca-file` · `--credentials-file` · `--name` · `--no-service`). The PC still has to reach the server on 443 (or a proxy).
 
+**Windows**: take `vexplor-edge-<version>-win-x64.zip` and `SHA256SUMS`; compare
+`(Get-FileHash .\vexplor-edge-<version>-win-x64.zip -Algorithm SHA256).Hash` with its line in `SHA256SUMS`, unpack it
+(`Expand-Archive`), and in an elevated PowerShell in that folder run
+`powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Server https://aas.factory-cloud.example -Code AA6B-CYFF-DWZE`.
+
 ## 17. Removing
 
 On the factory PC:
@@ -851,15 +918,22 @@ sudo rm -r /var/lib/vexplor-edge
 sudo userdel vexplor-edge
 ```
 
+On Windows (elevated): the one line with `-Uninstall` in place of `-Server … -Code …`, or
+`powershell -ExecutionPolicy Bypass -File "C:\Program Files\VEXPLOR Edge\install.ps1" -Uninstall`. The configuration,
+key and queue in `C:\ProgramData\VEXPLOR Edge` stay; add `-Purge` to delete them too.
+
 On the server, **revoke** the collector (§9). A PC removed without revoking stays in the list as stale.
 
 ## 18. Troubleshooting
 
-**While installing (`get.sh` · `install.sh`)**
+**While installing (`get.sh` · `install.sh` · `get.ps1` · `install.ps1`)**
 
 | Message | Cause | What to do |
 |---|---|---|
-| `this installer is for Linux (Windows is in preparation)` | Not Linux | A Linux PC or VM |
+| `this installer is for Linux - on Windows use the Windows tab (get.ps1)` | `get.sh` run on a Windows or Mac PC | On Windows, the command of the Windows tab (1.2.0 and later) |
+| `run this in an elevated Command Prompt or PowerShell` (Windows) | Not run as administrator | Right-click Command Prompt or PowerShell → Run as administrator, paste again |
+| `The request was aborted: Could not create SSL/TLS secure channel` (Windows) | The command was changed and lost `SecurityProtocol … 3072` (TLS 1.2) | Paste the command exactly as the screen shows it |
+| `unsupported CPU: ARM64` (Windows) | Windows on ARM | Windows x64 only for now |
 | `unsupported CPU: …` | Not x64 or arm64 | A supported PC |
 | `run as root` | Run without `sudo` | Paste the command as shown (`| sudo sh …`) |
 | `download failed: …` | GitHub not reachable | Behind a proxy, set `https_proxy` and run `sudo -E sh` (sudo drops environment variables by default), or install directly (§16) |
@@ -918,7 +992,7 @@ Every destination it connects to:
 | Destination | Why | When |
 |---|---|---|
 | The configured server on 443 (or `proxy`) | Registration · read list · batches | Always |
-| PLC addresses in the approved list (OPC UA · Modbus TCP · MQTT) | Reading values | After approval |
+| PLC addresses in the approved list (OPC UA · Modbus TCP · MQTT · S7 · MC) | Reading values | After approval |
 | `update.manifestUrl` | Update notice, once a day | Only if configured |
 | GitHub releases | Downloading the package (`get.sh`) | Only while installing |
 

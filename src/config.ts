@@ -53,6 +53,9 @@ export interface EdgeConfig {
   update?: { manifestUrl: string; publicKey: string };
 }
 
+/** Windows PowerShell 5.1 and older Notepad write UTF-8 with a byte order mark, which JSON.parse refuses */
+const withoutBom = (text: string): string => (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
+
 const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 
 export class EdgeConfigError extends Error {}
@@ -84,7 +87,7 @@ const deadbandOf = (value: unknown): number => {
 export function parseEdgeConfig(json: string, file: string): EdgeConfig {
   let raw: unknown;
   try {
-    raw = JSON.parse(json);
+    raw = JSON.parse(withoutBom(json));
   } catch (error) {
     throw new EdgeConfigError(`${file}: not JSON — ${(error as Error).message}`);
   }
@@ -147,7 +150,7 @@ export function loadEdgeConfig(file: string): EdgeConfig {
 export function loadCredentials(file: string | undefined): Map<string, { userName: string; password: string }> {
   const out = new Map<string, { userName: string; password: string }>();
   if (!file) return out;
-  const parsed = JSON.parse(readFileSync(file, 'utf8')) as Record<string, { userName?: unknown; password?: unknown }>;
+  const parsed = JSON.parse(withoutBom(readFileSync(file, 'utf8'))) as Record<string, { userName?: unknown; password?: unknown }>;
   for (const [ref, entry] of Object.entries(parsed)) {
     if (typeof entry?.userName !== 'string' || typeof entry.password !== 'string') throw new EdgeConfigError(`${file}: ${ref} needs userName and password`);
     out.set(ref, { userName: entry.userName, password: entry.password });

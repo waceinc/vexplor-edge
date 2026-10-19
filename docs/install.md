@@ -12,7 +12,7 @@ Studio, VEXPLOR Logic Studio Cloud).
 | | A. DMZ / office network | B. Equipment network |
 |---|---|---|
 | The PC sits | Between the office and equipment networks, reaching both | On the equipment network, with an outbound route to the server (often through a proxy) |
-| Firewall towards the equipment | The PC → PLC ports (OPC UA 4840, Modbus 502, MQTT 1883/8883) | Nothing new |
+| Firewall towards the equipment | The PC → PLC ports (OPC UA 4840, Modbus 502, MQTT 1883/8883; from 1.2.0 S7 102 and the MC port set in the PLC) | Nothing new |
 | Firewall towards the outside | The PC → the server on 443 (or the proxy) | The PC → the proxy (or the server on 443) |
 | Inbound to the PC | **None** | **None** |
 
@@ -24,15 +24,15 @@ through the site proxy. In both, nothing connects in.
 | Destination | Why | When |
 |---|---|---|
 | The server address in the configuration, port 443 (or through `proxy`) | Read list, batches, registration | Always |
-| The PLC endpoints in the approved read list (OPC UA, Modbus TCP, MQTT) | Reading values | After approval |
+| The PLC endpoints in the approved read list (OPC UA, Modbus TCP, MQTT; from 1.2.0 S7 and MC) | Reading values | After approval |
 | `update.manifestUrl` | Release notice, once a day | Only if configured |
 
 There is nothing else. The tests check this (STD-009 T9) by recording every connection attempt.
 
 ## 3. Install — one click
 
-Supported: **Linux x64 · arm64** (systemd). **Windows is in preparation** — until then use a Linux PC or a Linux VM on
-the site's Windows server. The factory PC connects to the server over **https** (plain http only to the same PC, for
+Supported: **Linux x64 · arm64** (systemd) and, from 1.2.0, **Windows x64** (a Windows service — [Windows](#windows)
+below). The factory PC connects to the server over **https** (plain http only to the same PC, for
 tests).
 
 **On the server's screen (VEXPLOR AAS Studio 2.7.0 or later)** — Settings → Remote collectors → **"+ Connect a
@@ -72,6 +72,62 @@ Program in `/opt/vexplor-edge`, configuration in `/etc/vexplor-edge/edge.json`, 
 system, its state folder writable, no capabilities). Logs: `journalctl -u vexplor-edge`. Version:
 `/opt/vexplor-edge/vexplor-edge --version`.
 
+### Windows
+
+From 1.2.0. Windows 10 or Server 2016 or later, x64, with Windows PowerShell 5.1 (part of Windows). On the server's
+screen choose the **Windows** tab; it makes the same command with the server and the code filled in. Open a Command
+Prompt or PowerShell with **Run as administrator** and paste it:
+
+```bat
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor 3072; & ([scriptblock]::Create((irm https://github.com/waceinc/vexplor-edge/releases/latest/download/get.ps1))) -Server https://aas.example.com -Code 7KQ4-M2XD-9PRT"
+```
+
+`get.ps1` takes `vexplor-edge-<version>-win-x64.zip` from the same release, checks it against `SHA256SUMS`, and only
+then runs the `install.ps1` inside. Options after the code are passed on — `-Proxy http://proxy:3128`,
+`-CaFile corp-ca.pem`, `-CredentialsFile credentials.json`, `-Name "Line 1"` (default: the PC's name), `-NoService`.
+
+- **Execution policy** is not changed. The command runs `get.ps1` as text (execution policy covers script files), and
+  only the installer process it starts gets `-ExecutionPolicy Bypass`, for that one file.
+- **TLS 1.2** is switched on for that window — Windows PowerShell 5.1 on Windows 10 / Server 2016 offers TLS 1.0 by
+  default and GitHub refuses it (`3072` in the command is TLS 1.2).
+- **Proxy**: `-Proxy` is used for the downloads and written to `edge.json`. Without it the downloads use the proxy set
+  in Windows (Internet Options). If the first download (`irm …/get.ps1`) needs a proxy Windows does not know, add
+  `-Proxy http://proxy:3128 -ProxyUseDefaultCredentials` to `irm` as well — the server's screen does this when a proxy is
+  entered.
+
+What it sets up:
+
+| Where | What | Access |
+|---|---|---|
+| `C:\Program Files\VEXPLOR Edge\vexplor-edge.exe` | The program (one executable) | Administrators write, everyone reads |
+| `C:\Program Files\VEXPLOR Edge\vexplor-edge-service.exe` · `.xml` | The service wrapper, WinSW 2.12.0 (MIT) and its settings | as above |
+| `C:\ProgramData\VEXPLOR Edge\edge.json` | Configuration (UTF-8, no byte order mark) | SYSTEM · Administrators write, the service reads |
+| `C:\ProgramData\VEXPLOR Edge\state\` | Key (`identity.json`), queue, refused batches, OPC UA certificates | SYSTEM · Administrators · the service only |
+| `C:\ProgramData\VEXPLOR Edge\logs\` | `vexplor-edge-service.out.log` (the collector's JSON lines) and the wrapper's log, rolled at 10 MB, 8 kept | as above |
+| Service `vexplor-edge` ("VEXPLOR Edge") | Account `NT AUTHORITY\LocalService`, automatic (delayed) start, restarted 10 s after a failure (60 s from the third), stopped with Ctrl+C | — |
+
+**Why a wrapper.** Node.js cannot answer the Windows service manager: a plain executable registered with `sc.exe` is
+ended after 30 seconds (error 1053). A small native wrapper is needed; WinSW is MIT, a single file, and its download is
+pinned by SHA-256 in `scripts/pack.mjs`. Its license text is in the package (`licenses/WinSW-LICENSE.txt`). The account,
+the start type and the restart rules are set by `install.ps1` through the service manager itself (CIM and `sc.exe`).
+
+**Running it.** `Get-Service vexplor-edge` · `Restart-Service vexplor-edge` (after a configuration change) ·
+`Get-Content -Wait "C:\ProgramData\VEXPLOR Edge\logs\vexplor-edge-service.out.log"` ·
+`& "C:\Program Files\VEXPLOR Edge\vexplor-edge.exe" --version`.
+
+**By hand (a PC without internet).** Take `vexplor-edge-<version>-win-x64.zip` and `SHA256SUMS` from Releases on another
+PC, then in an elevated PowerShell:
+
+```powershell
+(Get-FileHash .\vexplor-edge-<version>-win-x64.zip -Algorithm SHA256).Hash   # compare with the line in SHA256SUMS
+Expand-Archive .\vexplor-edge-<version>-win-x64.zip -DestinationPath . ; cd .\vexplor-edge-<version>
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Server https://aas.example.com -Code 7KQ4-M2XD-9PRT
+```
+
+**Upgrade.** The same one line with `-Upgrade` in place of `-Server … -Code …` (or `install.ps1 -Upgrade` from a
+newer package): it stops the service, replaces the program and starts it again. Registration, approval and `edge.json`
+stay.
+
 ## 4. Passwords and certificates
 
 - **PLC passwords** live in a credentials file on this PC, by endpoint — `{ "opc.tcp://10.0.0.5:4840": { "userName",
@@ -100,7 +156,13 @@ system, its state folder writable, no capabilities). Logs: `journalctl -u vexplo
 ## 6. Remove
 
 Linux: `sudo systemctl disable --now vexplor-edge && sudo rm -r /opt/vexplor-edge /etc/vexplor-edge /etc/systemd/system/vexplor-edge.service`
-(and `/var/lib/vexplor-edge` once its queue is no longer needed). Revoke the device on the server as well.
+(and `/var/lib/vexplor-edge` once its queue is no longer needed).
+
+Windows: the one line with `-Uninstall` in place of `-Server … -Code …`, or in an elevated PowerShell
+`powershell -ExecutionPolicy Bypass -File "C:\Program Files\VEXPLOR Edge\install.ps1" -Uninstall`. It removes the
+service and the program and keeps `C:\ProgramData\VEXPLOR Edge`; `-Purge` deletes that too (key and queue).
+
+Revoke the device on the server as well.
 
 ## 7. What was checked
 
@@ -110,4 +172,12 @@ Linux: `sudo systemctl disable --now vexplor-edge && sudo rm -r /opt/vexplor-edg
   containers have no systemd, so it ran with `--no-service`.
 - **Service (earlier version — the same installer, AAS Studio 2.4 time)** — installed on a clean Ubuntu 24.04 (x86_64)
   machine as a systemd service, registered, approved and sent values from an OPC UA server over the network.
-- Windows is in preparation.
+- **Windows (1.2.0)** — checked on every change by CI on a Windows Server runner (`windows-latest`, job `windows`):
+  the unit tests on a Windows file system, the package built there, the scripts parsed by Windows PowerShell 5.1, the
+  executable's `--version`, and the package installed as a real service against a stand-in server — runs as
+  LocalService, writes and sends its queue, starts again after the program is killed, stops with the service, upgrades
+  and uninstalls (`test/windows/service-smoke.ps1`). First green run: 2026-10-19 on the Windows commit (697cacf) — 52 of 52
+  unit tests, the package built, and every service check `[OK]` (registered once, running as LocalService, delayed
+  automatic start, restart on failure, no byte order mark, key and queue closed to Users, a batch sent, log written,
+  started again after a kill, stopped with no program left, upgrade kept the registration, removed with `-Purge`).
+  Not yet installed on a factory PC.

@@ -21,6 +21,8 @@ export default defineConfig({
       '@aas/fieldbus': at('packages/fieldbus/src/index.ts'),
       '@aas/api': at('apps/api/src/index.ts'),
       '@aas-test/opcua-server': at('packages/opcua/test/server.ts'),
+      '@aas-test/s7-server': at('packages/fieldbus/test/s7-mock-server.ts'),
+      '@aas-test/mc-server': at('packages/fieldbus/test/mc-mock-server.ts'),
     },
   },
   server: { fs: { allow: [AAS, '.'] } },

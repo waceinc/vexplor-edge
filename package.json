@@ -1,6 +1,6 @@
 {
   "name": "vexplor-edge",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "VEXPLOR Edge — the remote collector. Reads the PLCs an approved read list names and sends signed batches out over HTTPS (contract vexplor.edge/1)",
   "license": "Apache-2.0",
   "author": "WACE",
@@ -30,13 +30,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
     "test:interop": "vitest run --config vitest.interop.config.ts",
-    "pack:release": "npm run build && node scripts/pack.mjs --arm64"
+    "pack:release": "npm run build && node scripts/pack.mjs --arm64 --windows"
   },
   "dependencies": {
-    "@aas/collector": "https://github.com/waceinc/vexplor-aas/releases/download/v2.7.0/aas-collector-2.7.0.tgz",
-    "@aas/core": "https://github.com/waceinc/vexplor-aas/releases/download/v2.7.0/aas-core-2.7.0.tgz",
-    "@aas/fieldbus": "https://github.com/waceinc/vexplor-aas/releases/download/v2.7.0/aas-fieldbus-2.7.0.tgz",
-    "@aas/opcua": "https://github.com/waceinc/vexplor-aas/releases/download/v2.7.0/aas-opcua-2.7.0.tgz"
+    "@aas/collector": "https://github.com/waceinc/vexplor-aas/releases/download/v2.10.0/aas-collector-2.10.0.tgz",
+    "@aas/core": "https://github.com/waceinc/vexplor-aas/releases/download/v2.10.0/aas-core-2.10.0.tgz",
+    "@aas/fieldbus": "https://github.com/waceinc/vexplor-aas/releases/download/v2.10.0/aas-fieldbus-2.10.0.tgz",
+    "@aas/opcua": "https://github.com/waceinc/vexplor-aas/releases/download/v2.10.0/aas-opcua-2.10.0.tgz"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

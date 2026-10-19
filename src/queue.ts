@@ -10,9 +10,14 @@
  *    Node ended the process. A batch that cannot be written now waits in memory — at most `memoryBatches` batches and
  *    `memorySamples` samples, the oldest dropped and counted beyond that — is sent from there like any other, and is
  *    written to disk first thing once a write works again. One log line when writing fails, one when it works again.
+ * Important: on Windows a file can be held open for a moment by antivirus or the indexer (1.2.0). Renames and deletes are
+ *    retried briefly (fsretry.ts); a sent batch whose file stays held is remembered as sent — never sent again — and
+ *    deleted on a later look. No clean-up step may throw out of the queue.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { retryHeld } from './fsretry.js';
 
 export interface Batch {
   schema: 'vexplor.edge.batch/1';
@@ -49,6 +54,8 @@ export class DiskQueue {
   /** The last failed write, kept after writing works again (like lastSendError) */
   writeError: { message: string; at: string } | null = null;
   private failing = false;
+  /** Sent batches whose file could not be deleted yet (held open) — not offered again, deleted on a later look */
+  private readonly sent = new Set<string>();
 
   constructor(
     stateDir: string,
@@ -74,9 +81,9 @@ export class DiskQueue {
     const temporary = join(this.queueDir, `${name}.tmp`);
     try {
       writeFileSync(temporary, JSON.stringify(batch));
-      renameSync(temporary, join(this.queueDir, name));
+      retryHeld(() => renameSync(temporary, join(this.queueDir, name)));
     } catch (error) {
-      rmSync(temporary, { force: true });
+      this.remove(temporary);
       const message = (error instanceof Error ? error.message : String(error)).replace(/\s+/g, ' ').slice(0, 512);
       this.writeError = { message, at: new Date(this.now()).toISOString() };
       if (!this.failing) this.options.log?.(`queue: cannot write to disk, keeping batches in memory and sending them from there — ${message}`);
@@ -108,8 +115,19 @@ export class DiskQueue {
     });
     const tooMany = files.filter((file) => !tooOld.includes(file)).slice(0, Math.max(0, files.length - tooOld.length - this.max));
     for (const old of [...tooOld, ...tooMany]) {
-      unlinkSync(join(this.queueDir, old));
+      // Dropped either way: a file that stays held is remembered and deleted later, not sent
+      if (!this.remove(join(this.queueDir, old))) this.sent.add(old);
       this.dropped += 1;
+    }
+  }
+
+  /** Deletes one file, riding out a short hold; false when it is still there */
+  private remove(path: string): boolean {
+    try {
+      retryHeld(() => rmSync(path, { force: true }));
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -127,7 +145,10 @@ export class DiskQueue {
   }
 
   private diskFiles(): string[] {
-    return readdirSync(this.queueDir).filter((name) => name.endsWith('.json')).sort();
+    for (const name of this.sent) if (this.remove(join(this.queueDir, name))) this.sent.delete(name);
+    return readdirSync(this.queueDir)
+      .filter((name) => name.endsWith('.json') && !this.sent.has(name))
+      .sort();
   }
 
   /** Batches waiting to be sent, oldest first — on disk and, while the disk takes none, in memory */
@@ -159,7 +180,7 @@ export class DiskQueue {
 
   done(name: string): void {
     if (this.memory.delete(name)) return;
-    if (existsSync(join(this.queueDir, name))) unlinkSync(join(this.queueDir, name));
+    if (!this.remove(join(this.queueDir, name))) this.sent.add(name);
   }
 
   refuse(name: string): void {
@@ -174,6 +195,16 @@ export class DiskQueue {
       }
       return;
     }
-    renameSync(join(this.queueDir, name), join(this.refusedDir, name));
+    try {
+      retryHeld(() => renameSync(join(this.queueDir, name), join(this.refusedDir, name)));
+    } catch {
+      // Held open: keep a copy for a person, and never offer the batch again
+      try {
+        writeFileSync(join(this.refusedDir, name), readFileSync(join(this.queueDir, name)));
+      } catch {
+        // Counted as refused by the sender either way
+      }
+      this.sent.add(name);
+    }
   }
 }

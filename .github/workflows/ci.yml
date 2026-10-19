@@ -47,3 +47,68 @@ jobs:
       - run: npm ci && npx tsc -b
         working-directory: vexplor-aas
       - run: npm run test:interop
+
+  # Windows x64 (1.2.0): the unit tests on a Windows file system, the package built there, the installer scripts parsed
+  # by Windows PowerShell 5.1, and the package installed as a real service (test/windows/service-smoke.ps1). A Mac or
+  # Linux machine cannot run any of this — this job is the measurement.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - name: installer scripts parse in Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $PSVersionTable.PSVersion
+          foreach ($file in 'scripts\get.ps1', 'install\install.ps1', 'test\windows\service-smoke.ps1') {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file).Path, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors) { $errors | ForEach-Object { Write-Host "${file}: $_" }; exit 1 }
+          }
+      - name: package (Windows only — Linux packages are built on Linux)
+        run: node scripts/pack.mjs --windows --no-linux
+      - name: the executable starts, get.ps1 is pinned, SHA256SUMS matches
+        shell: powershell
+        run: |
+          $version = (Select-String -Path src\version.ts -Pattern "EDGE_VERSION = '([^']+)'").Matches[0].Groups[1].Value
+          $out = & "out\build\win-x64\vexplor-edge-$version\vexplor-edge.exe" --version
+          if ($out -ne "vexplor-edge $version") { throw "--version answered: $out" }
+          if (-not (Select-String -Path out\get.ps1 -SimpleMatch "`$Version = '$version'")) { throw 'get.ps1 is not pinned to this version' }
+          foreach ($line in Get-Content out\SHA256SUMS) {
+            $hash, $name = $line -split '\s+', 2
+            if ((Get-FileHash -Algorithm SHA256 "out\$name").Hash.ToLowerInvariant() -ne $hash) { throw "$name does not match SHA256SUMS" }
+          }
+          Write-Host "$out - $(Get-Content out\SHA256SUMS | Measure-Object -Line | Select-Object -ExpandProperty Lines) files in SHA256SUMS"
+      - name: installed as a Windows service
+        shell: powershell
+        run: |
+          $version = (Select-String -Path src\version.ts -Pattern "EDGE_VERSION = '([^']+)'").Matches[0].Groups[1].Value
+          powershell -NoProfile -ExecutionPolicy Bypass -File test\windows\service-smoke.ps1 -Package "out\build\win-x64\vexplor-edge-$version"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  # The interop tests on Windows — the queue, reconnects and the proxy on a Windows file system and network stack, against
+  # a real AAS Studio server. Kept apart from the required jobs until a few runs show it is stable there.
+  interop-windows:
+    runs-on: windows-latest
+    continue-on-error: true
+    env:
+      AAS_DIR: ${{ github.workspace }}\vexplor-aas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: waceinc/vexplor-aas
+          path: vexplor-aas
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm ci && npx tsc -b
+        working-directory: vexplor-aas
+      - run: npm run test:interop
