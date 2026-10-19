@@ -28,8 +28,12 @@ AAS_DIR=../vexplor-aas npm run test:interop   # 빌드한 waceinc/vexplor-aas �
 2. **바뀐 것** — README 「판」 표의 새 판 행(「바뀐 것」 칸을 비우지 않는다)과 그 기능 안내(사용법 · `docs/install.md` · `docs/설치.md` · 규격), 영어와 한국어.
    wace.me Edge 페이지의 「판마다 바뀐 것」 표(`wace-home/scripts/build-edge-page.py` 의 `chg`, 국 · 영 · 일)와 프로젝트 페이지 「판」 절에도
    같은 행을 위에 더합니다 — 지난 판 행은 지우지 않고 이어서 쌓습니다. 매일 점검이 이 행까지 대조합니다.
-3. **릴리스** — `npm run pack:release`, 태그 `vX.Y.Z`, Linux 꾸러미 둘 · `get.sh` · `SHA256SUMS` 첨부. 한 줄 설치는 늘
-   `releases/latest/download/get.sh` 를 받고, 그 파일은 자기 릴리스 판에 고정돼 있습니다.
+3. **릴리스** — Linux 나 macOS 에서 `npm run pack:release`(Linux x64 · arm64 와 Windows x64 를 만듭니다. Windows 에서는 Windows
+   꾸러미만 만들 수 있습니다), 태그 `vX.Y.Z`, Linux 꾸러미 둘 · `vexplor-edge-X.Y.Z-win-x64.zip` · `get.sh` · `get.ps1` ·
+   `SHA256SUMS` 여섯 개를 모두 첨부(`SHA256SUMS` 에 나머지 다섯이 들어 있습니다). 한 줄 설치는 늘 `releases/latest/download/get.sh` 와
+   `…/get.ps1` 을 받고, 각 파일은 자기 릴리스 판에 고정돼 있습니다. 릴리스 커밋에서 CI 작업 `windows`(꾸러미를 실제 Windows 서비스로
+   설치)가 통과해야 합니다 — Mac · Linux 에서는 Windows 꾸러미를 시험할 수 없습니다. Windows 실행 파일은 코드 서명이 없고, 확인은
+   `SHA256SUMS` 로 합니다.
 4. **웹사이트** — wace.me 의 VEXPLOR Edge 페이지(국 · 영 · 일)와 `gh-pages` 브랜치의 프로젝트 페이지
    (waceinc.github.io/vexplor-edge): 판 표기와 바뀐 것. 판을 올리는 사람이 코드를 보고 직접 작성합니다. 매일 점검이 최신 릴리스와
    README · 웹사이트를 대조합니다.

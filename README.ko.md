@@ -13,13 +13,21 @@
 
 1. **「+ 수집기 연결」** — 서버 주소와 지금 읽을 목록(설비 · 태그 수)을 확인하고 「연결 명령 만들기」를 누릅니다.
    「이 목록을 바로 읽게 승인」이 켜져 있으면 승인도 이 단추로 끝납니다.
-2. 화면에 나온 **한 줄을 공장 Linux PC의 터미널에 붙여 넣습니다.**
+2. 화면에 나온 **한 줄을 공장 PC에 붙여 넣습니다** — 화면에 Linux 와 Windows 탭이 있습니다.
+
+   Linux — 터미널에:
 
    ```bash
    curl -fsSL https://github.com/waceinc/vexplor-edge/releases/latest/download/get.sh | sudo sh -s -- --server https://aas.example.com --code 7KQ4-M2XD-9PRT
    ```
 
-   이 PC의 CPU에 맞는 판을 내려받아 같은 릴리스의 `SHA256SUMS`와 대조하고, 설치 · 등록 · 서비스 시작까지 한 번에 처리합니다.
+   Windows(1.2.0 부터) — 「관리자 권한으로 실행」한 명령 프롬프트나 PowerShell 에:
+
+   ```bat
+   powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor 3072; & ([scriptblock]::Create((irm https://github.com/waceinc/vexplor-edge/releases/latest/download/get.ps1))) -Server https://aas.example.com -Code 7KQ4-M2XD-9PRT"
+   ```
+
+   이 PC에 맞는 판을 내려받아 같은 릴리스의 `SHA256SUMS`와 대조하고, 설치 · 등록 · 서비스 시작까지 한 번에 처리합니다.
 3. 화면에 **「받는 중」**이 뜨면 끝입니다. 값은 그 설비 파일의 「수집」 칸에 저절로 들어옵니다.
 
 등록 코드는 24시간 동안 한 번만 쓸 수 있습니다. 화면은 공장 PC를 기다리다가 연결되는 순간 그 PC 이름을 보여 줍니다.
@@ -58,9 +66,15 @@ PLC 번지 · 레지스터 종류 · 자료형 같은 수집 내용은 공장 PC
 
 - **원클릭** — 위의 한 줄(화면이 서버 주소와 코드를 채워 줍니다).
 - **직접** — [Releases](https://github.com/waceinc/vexplor-edge/releases)에서 `vexplor-edge-<판>-linux-x64.tar.gz`(또는 `linux-arm64`)와
-  `SHA256SUMS`를 받아 대조한 뒤 `sudo ./install.sh --server … --code …`.
+  `SHA256SUMS`를 받아 대조한 뒤 `sudo ./install.sh --server … --code …`. Windows 는 `vexplor-edge-<판>-win-x64.zip` 을 받아
+  관리자 권한으로 `powershell -ExecutionPolicy Bypass -File .\install.ps1 -Server … -Code …`.
 
-지원: **Linux x64 · arm64**(systemd). Windows는 준비 중입니다. 자세한 안내: [docs/설치.md](docs/설치.md) · 처음부터 끝까지: [docs/사용법.md](docs/사용법.md)
+| 지원 | 서비스 | 판 |
+|---|---|---|
+| Linux x64 · arm64 | systemd `vexplor-edge` | 1.0.0 부터 |
+| Windows x64 (Windows 10 / Server 2016 이상, Windows PowerShell 5.1) | Windows 서비스 `vexplor-edge`(WinSW) — LocalService 계정, 지연 자동 시작, 멈추면 다시 시작 | 1.2.0 부터 |
+
+자세한 안내: [docs/설치.md](docs/설치.md) · 처음부터 끝까지: [docs/사용법.md](docs/사용법.md)
 
 ## 문서
 
@@ -74,7 +88,7 @@ PLC 번지 · 레지스터 종류 · 자료형 같은 수집 내용은 공장 PC
 npm ci && npm run build && npm test          # 단위 시험
 git clone https://github.com/waceinc/vexplor-aas ../vexplor-aas && (cd ../vexplor-aas && npm ci && npx tsc -b)
 npm run test:interop                         # 실제 AAS Studio 서버와 맞물리는 시험(AAS_DIR 로 위치 지정)
-npm run pack:release                         # Linux x64 · arm64 꾸러미 + get.sh + SHA256SUMS
+npm run pack:release                         # Linux x64 · arm64 · Windows x64 꾸러미 + get.sh + get.ps1 + SHA256SUMS
 ```
 
 설비를 읽는 코드는 VEXPLOR AAS Studio 릴리스 라이브러리(`@aas/collector` · `@aas/fieldbus` · `@aas/opcua`)를 릴리스 주소로

@@ -14,7 +14,7 @@ VERSION="__EDGE_VERSION__"
 
 fail() { echo "vexplor-edge: $1" >&2; exit 1; }
 
-[ "$(uname -s)" = "Linux" ] || fail "this installer is for Linux (Windows is in preparation)"
+[ "$(uname -s)" = "Linux" ] || fail "this installer is for Linux - on Windows use the Windows tab (get.ps1)"
 case "$(uname -m)" in
   x86_64|amd64) PLATFORM="linux-x64" ;;
   aarch64|arm64) PLATFORM="linux-arm64" ;;

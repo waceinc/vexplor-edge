@@ -9,6 +9,8 @@ import { generateKeyPairSync } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { retryHeld } from './fsretry.js';
+
 export interface Identity {
   publicKey: string;
   privateKeyPem: string;
@@ -40,5 +42,6 @@ export function loadOrCreateIdentity(stateDir: string): Identity {
 export function saveIdentity(stateDir: string, identity: Identity): void {
   const file = identityPath(stateDir);
   writeFileSync(`${file}.tmp`, JSON.stringify(identity, null, 2), { mode: 0o600 });
-  renameSync(`${file}.tmp`, file);
+  // Replacing a file antivirus holds open fails for a moment on Windows
+  retryHeld(() => renameSync(`${file}.tmp`, file));
 }

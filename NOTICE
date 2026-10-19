@@ -17,4 +17,7 @@ Third-party material
   Apache-2.0) as its release libraries @aas/core, @aas/collector, @aas/fieldbus
   and @aas/opcua.
 - Each package lists the third-party software bundled into it, with licenses,
-  in THIRD-PARTY-NOTICES.txt and sbom.cdx.json.
+  in THIRD-PARTY-NOTICES.txt and sbom.cdx.json, and carries the license texts of
+  the binaries it ships in licenses/ — Node.js (MIT, with its bundled components)
+  and, in the Windows package, the service wrapper WinSW 2.12.0
+  (github.com/winsw/winsw, MIT).

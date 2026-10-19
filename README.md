@@ -14,14 +14,22 @@ Start on the server — VEXPLOR AAS Studio 2.7.0 or later — under **Settings �
 
 1. **"+ Connect a collector"** — check the server address and the list it will read (machines, tags), then press
    "Make the connect command". With "Approve this list so it reads at once" ticked, that press is the approval too.
-2. **Paste the one line it shows into a terminal on the factory Linux PC.**
+2. **Paste the one line it shows on the factory PC** — the screen has a Linux and a Windows tab.
+
+   Linux, in a terminal:
 
    ```bash
    curl -fsSL https://github.com/waceinc/vexplor-edge/releases/latest/download/get.sh | sudo sh -s -- --server https://aas.example.com --code 7KQ4-M2XD-9PRT
    ```
 
-   It downloads the package for the PC's CPU, checks it against the release's `SHA256SUMS`, then installs, registers
-   and starts the service in one go.
+   Windows (1.2.0 and later), in a Command Prompt or PowerShell opened with "Run as administrator":
+
+   ```bat
+   powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor 3072; & ([scriptblock]::Create((irm https://github.com/waceinc/vexplor-edge/releases/latest/download/get.ps1))) -Server https://aas.example.com -Code 7KQ4-M2XD-9PRT"
+   ```
+
+   It downloads the package for the PC, checks it against the release's `SHA256SUMS`, then installs, registers and
+   starts the service in one go.
 3. **Done when the screen shows "Receiving".** Values appear by themselves in "Collect" for that machine file.
 
 The code works once, for 24 hours. The screen waits for the factory PC and shows its name the moment it connects. The
@@ -61,9 +69,15 @@ Cloud receives the same contract too (opened to design-partner companies first, 
 - **One click** — the line above (the screen fills in the server and the code).
 - **By hand** — from [Releases](https://github.com/waceinc/vexplor-edge/releases) take
   `vexplor-edge-<version>-linux-x64.tar.gz` (or `linux-arm64`) and `SHA256SUMS`, check them, then
-  `sudo ./install.sh --server … --code …`.
+  `sudo ./install.sh --server … --code …`. On Windows `vexplor-edge-<version>-win-x64.zip`, then
+  `powershell -ExecutionPolicy Bypass -File .\install.ps1 -Server … -Code …` as administrator.
 
-Supported: **Linux x64 · arm64** (systemd). Windows is in preparation. Full guide: [docs/install.md](docs/install.md) · End to end: [docs/usage.md](docs/usage.md)
+| Supported | Service | From |
+|---|---|---|
+| Linux x64 · arm64 | systemd `vexplor-edge` | 1.0.0 |
+| Windows x64 (Windows 10 / Server 2016 or later, Windows PowerShell 5.1) | Windows service `vexplor-edge` (WinSW), LocalService account, delayed automatic start, restarted after a failure | 1.2.0 |
+
+Full guide: [docs/install.md](docs/install.md) · End to end: [docs/usage.md](docs/usage.md)
 
 ## Documents
 
@@ -82,7 +96,7 @@ Supported: **Linux x64 · arm64** (systemd). Windows is in preparation. Full gui
 npm ci && npm run build && npm test          # unit tests
 git clone https://github.com/waceinc/vexplor-aas ../vexplor-aas && (cd ../vexplor-aas && npm ci && npx tsc -b)
 npm run test:interop                         # against a real AAS Studio server (AAS_DIR sets where)
-npm run pack:release                         # Linux x64 · arm64 packages + get.sh + SHA256SUMS
+npm run pack:release                         # Linux x64 · arm64 · Windows x64 packages + get.sh + get.ps1 + SHA256SUMS
 ```
 
 The equipment readers come from VEXPLOR AAS Studio's release libraries (`@aas/collector`, `@aas/fieldbus`,

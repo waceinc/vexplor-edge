@@ -1,17 +1,24 @@
-<!-- VEXPLOR Edge as a Windows service, run by WinSW (https://github.com/winsw/winsw, MIT). docs/edge-install.md -->
+<!--
+  VEXPLOR Edge as a Windows service, run by WinSW 2.12.0 (https://github.com/winsw/winsw, MIT) - docs/install.md.
+  Read only, outbound only, listens on no port.
+
+  The account (LocalService), the delayed automatic start and the restart rules are set by install.ps1 through the
+  service manager after "install"; the values below say the same, so a service made from this file alone behaves alike.
+  WinSW stops the program with Ctrl+C (SIGINT) and waits stoptimeout - the collector writes what it read but did not
+  batch yet to its queue before it ends.
+-->
 <service>
   <id>vexplor-edge</id>
   <name>VEXPLOR Edge</name>
-  <description>VEXPLOR remote collector — reads approved equipment tags and sends signed batches. Read only, outbound only.</description>
+  <description>VEXPLOR remote collector - reads approved equipment tags and sends signed batches. Read only, outbound only.</description>
   <executable>%BASE%\vexplor-edge.exe</executable>
   <arguments>run --config "%ProgramData%\VEXPLOR Edge\edge.json"</arguments>
   <startmode>Automatic</startmode>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
   <stoptimeout>15 sec</stoptimeout>
-  <serviceaccount>
-    <username>NT AUTHORITY\LocalService</username>
-  </serviceaccount>
   <logpath>%ProgramData%\VEXPLOR Edge\logs</logpath>
   <log mode="roll-by-size">
     <sizeThreshold>10240</sizeThreshold>

@@ -30,8 +30,12 @@ release is not done while any of these still shows the old version or misses wha
    Add the new version's row with a filled "What changed" cell, and the same row on top of the "What changed in each version"
    table on the wace.me Edge page (`chg` in `wace-home/scripts/build-edge-page.py`, Korean, English, Japanese) and the
    "Versions" section of the project page. Older rows stay; the daily check compares these rows too.
-3. **Release** — `npm run pack:release`, tag `vX.Y.Z`, attach both Linux packages, `get.sh` and `SHA256SUMS`. The
-   one-line install always fetches `releases/latest/download/get.sh`, which is pinned to its own release.
+3. **Release** — `npm run pack:release` on Linux or macOS (it builds Linux x64 · arm64 and Windows x64; a Windows machine
+   can build only the Windows package), tag `vX.Y.Z`, attach both Linux packages, `vexplor-edge-X.Y.Z-win-x64.zip`,
+   `get.sh`, `get.ps1` and `SHA256SUMS` — all six, `SHA256SUMS` lists the other five. The one-line installs always fetch
+   `releases/latest/download/get.sh` and `…/get.ps1`, each pinned to its own release. The CI job `windows` (the package
+   installed as a real Windows service) must be green on the release commit — a Mac or Linux machine cannot test the
+   Windows package. The Windows executable is not code-signed; its check is `SHA256SUMS`.
 4. **Website** — the VEXPLOR Edge page on wace.me (Korean, English, Japanese) and the project page on the `gh-pages`
    branch (waceinc.github.io/vexplor-edge): version label and what changed. Whoever bumps the version writes the text,
    checked against the code. A daily check compares the latest release with the README and the website.

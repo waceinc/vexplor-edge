@@ -157,8 +157,8 @@ files (AASX) become the "read list", and the collector starts reading only after
 
 | Item | Details |
 |---|---|
-| Operating system | Linux x64 or arm64 with systemd. Windows is in preparation — until then use a Linux PC or a Linux VM on a Windows server |
-| Tools | `curl`, `sha256sum` (or `shasum`), admin rights (`sudo`). No Node.js — the program is one executable |
+| Operating system | Linux x64 or arm64 with systemd, or (1.2.0 and later) Windows 10 / Server 2016 or later, x64, with Windows PowerShell 5.1 |
+| Tools | Linux: `curl`, `sha256sum` (or `shasum`), admin rights (`sudo`). Windows: an administrator account — PowerShell 5.1 is part of Windows. No Node.js — the program is one executable |
 | Download | about 44 MB per package (1.0.0) |
 | Outbound | to the server address on 443 (directly or through the site proxy) |
 | To the machines | to the PLC ports — OPC UA 4840, Modbus TCP 502, MQTT 1883/8883 |
@@ -523,6 +523,19 @@ Options you can add:
 | `--name "Line 1"` | Name shown on the server. Default: the PC's hostname |
 | `--no-service` | Do not register a service (tests · containers) |
 
+**On a Windows PC (1.2.0 and later)** — choose the **Windows** tab above the command. Open a Command Prompt or PowerShell
+with **Run as administrator** (right-click) and paste:
+
+```bat
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor 3072; & ([scriptblock]::Create((irm https://github.com/waceinc/vexplor-edge/releases/latest/download/get.ps1))) -Server https://aas.factory-cloud.example -Code AA6B-CYFF-DWZE"
+```
+
+It does the same five things: the `win-x64` package from the latest release, the `SHA256SUMS` check, the program in
+`C:\Program Files\VEXPLOR Edge` and the configuration in `C:\ProgramData\VEXPLOR Edge\edge.json`, the key and the
+registration, and the Windows service `vexplor-edge` (automatic start, restarted after a failure). It changes no
+execution policy and needs nothing installed besides Windows. The options are the same with a PowerShell spelling —
+`-Proxy` · `-CaFile` · `-CredentialsFile` · `-Name` · `-NoService`. Details: [install.md — Windows](install.md#windows).
+
 ### 5-5. Check the connection
 
 The moment the PC registers, the card shows it — while waiting it reads the device list every 3 s. Press **Done**; a
@@ -681,6 +694,21 @@ The log is one JSON object per line (time, level, message). Normal lines:
 The service runs as its own account `vexplor-edge` with reduced rights — no new privileges, a read-only system, and
 `/var/lib/vexplor-edge` as the only place it can write.
 
+**On Windows** (elevated PowerShell):
+
+| To | Command |
+|---|---|
+| See if it runs | `Get-Service vexplor-edge` |
+| Follow the log | `Get-Content -Wait "C:\ProgramData\VEXPLOR Edge\logs\vexplor-edge-service.out.log"` |
+| Restart (after a configuration change) | `Restart-Service vexplor-edge` |
+| Stop | `Stop-Service vexplor-edge` |
+| Version | `& "C:\Program Files\VEXPLOR Edge\vexplor-edge.exe" --version` |
+
+The program is in `C:\Program Files\VEXPLOR Edge`; `edge.json`, `ca.pem`, `credentials.json` and the `state\` folder
+(key, queue, refused batches, OPC UA certificates) are in `C:\ProgramData\VEXPLOR Edge`. The service runs as
+`NT AUTHORITY\LocalService`: it reads the configuration and can write only `state\` and `logs\`; ordinary users cannot
+read the key. The full table: [install.md — Windows](install.md#windows).
+
 ## 11. The configuration file `edge.json`
 
 The installer writes three keys:
@@ -813,6 +841,9 @@ sudo systemctl restart vexplor-edge
 /opt/vexplor-edge/vexplor-edge --version
 ```
 
+**On Windows** — the one line from the server's screen with `-Upgrade` in place of `-Server … -Code …` (elevated):
+it fetches the latest release, checks it, stops the service, replaces the program and starts it again.
+
 The version on the server screen changes with the next batch. What changed in each version:
 [Releases](https://github.com/waceinc/vexplor-edge/releases).
 
@@ -838,6 +869,11 @@ sudo ./install.sh --server https://aas.factory-cloud.example --code AA6B-CYFF-DW
 The code is the `--code` of the command the screen made. `install.sh` takes the same options as `get.sh` (`--proxy` ·
 `--ca-file` · `--credentials-file` · `--name` · `--no-service`). The PC still has to reach the server on 443 (or a proxy).
 
+**Windows**: take `vexplor-edge-<version>-win-x64.zip` and `SHA256SUMS`; compare
+`(Get-FileHash .\vexplor-edge-<version>-win-x64.zip -Algorithm SHA256).Hash` with its line in `SHA256SUMS`, unpack it
+(`Expand-Archive`), and in an elevated PowerShell in that folder run
+`powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Server https://aas.factory-cloud.example -Code AA6B-CYFF-DWZE`.
+
 ## 17. Removing
 
 On the factory PC:
@@ -851,15 +887,22 @@ sudo rm -r /var/lib/vexplor-edge
 sudo userdel vexplor-edge
 ```
 
+On Windows (elevated): the one line with `-Uninstall` in place of `-Server … -Code …`, or
+`powershell -ExecutionPolicy Bypass -File "C:\Program Files\VEXPLOR Edge\install.ps1" -Uninstall`. The configuration,
+key and queue in `C:\ProgramData\VEXPLOR Edge` stay; add `-Purge` to delete them too.
+
 On the server, **revoke** the collector (§9). A PC removed without revoking stays in the list as stale.
 
 ## 18. Troubleshooting
 
-**While installing (`get.sh` · `install.sh`)**
+**While installing (`get.sh` · `install.sh` · `get.ps1` · `install.ps1`)**
 
 | Message | Cause | What to do |
 |---|---|---|
-| `this installer is for Linux (Windows is in preparation)` | Not Linux | A Linux PC or VM |
+| `this installer is for Linux - on Windows use the Windows tab (get.ps1)` | `get.sh` run on a Windows or Mac PC | On Windows, the command of the Windows tab (1.2.0 and later) |
+| `run this in an elevated Command Prompt or PowerShell` (Windows) | Not run as administrator | Right-click Command Prompt or PowerShell → Run as administrator, paste again |
+| `The request was aborted: Could not create SSL/TLS secure channel` (Windows) | The command was changed and lost `SecurityProtocol … 3072` (TLS 1.2) | Paste the command exactly as the screen shows it |
+| `unsupported CPU: ARM64` (Windows) | Windows on ARM | Windows x64 only for now |
 | `unsupported CPU: …` | Not x64 or arm64 | A supported PC |
 | `run as root` | Run without `sudo` | Paste the command as shown (`| sudo sh …`) |
 | `download failed: …` | GitHub not reachable | Behind a proxy, set `https_proxy` and run `sudo -E sh` (sudo drops environment variables by default), or install directly (§16) |
