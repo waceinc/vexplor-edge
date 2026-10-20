@@ -16,6 +16,9 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.23485165
     description: "Version 1.2.0"
+  - type: doi
+    value: 10.5281/zenodo.23487128
+    description: "Version 1.3.0"
 keywords:
   - remote collector
   - Asset Administration Shell
