@@ -55,7 +55,7 @@ PLC 번지 · 레지스터 종류 · 자료형 같은 수집 내용은 공장 PC
 
 | | |
 |---|---|
-| **읽기만** | PLC · 제어기에 쓰는 코드가 없습니다. 설비를 읽는 코드는 AAS Studio 서버의 수집기와 같습니다(OPC UA · Modbus TCP · MQTT, 1.2.0 부터 S7 · MC — [아래](#통신-규약)) |
+| **읽기만** | PLC · 제어기에 쓰는 코드가 없습니다. 설비를 읽는 코드는 AAS Studio 서버의 수집기와 같습니다(OPC UA · Modbus TCP · MQTT, 1.2.0 부터 S7 · MC, 1.3.0 부터 LS ELECTRIC XGT — [아래](#통신-규약)) |
 | **밖으로만** | 서버 주소 443(또는 현장 프록시)으로만 나갑니다. 포트를 열지 않고, 서버에서 들어오는 길이 없습니다 |
 | **승인한 목록만** | 서버에서 사람이 승인한 목록에 있는 태그만 읽습니다. 목록이 바뀌면 다시 승인할 때까지 새 목록을 받지 않습니다 |
 | **요청마다 서명** | 등록할 때 이 PC에서 Ed25519 키를 만들고, 모든 요청에 서명합니다. 개인 키는 이 PC를 떠나지 않습니다 |
@@ -73,6 +73,7 @@ PLC 번지 · 레지스터 종류 · 자료형 같은 수집 내용은 공장 PC
 | MQTT | MQTT 브로커(토픽의 마지막 값) | 1883 · 8883(TLS) | 1.0.0 부터 |
 | **S7** | Siemens S7-300 · 400 · 1200 · 1500 — ISO-on-TCP 위 S7comm | **102** | 1.2.0 부터 |
 | **MC** | MELSEC Q · L · iQ-R · iQ-F — MC 프로토콜, 3E 프레임, 바이너리 코드 | **PLC 이더넷 설정에서 정한 포트**(정해진 번호 없음) | 1.2.0 부터 |
+| **XGT** | FEnet 모듈을 단 LS ELECTRIC XGK · XGI · XGR · XGB — XGT 전용 프로토콜 | **2004** | 1.3.0 부터 |
 
 S7 · MC 는 **읽기만 하는 VEXPLOR 확장 바인딩**입니다. AID 1.1 에 이 둘의 바인딩이 없어서, AAS Studio(2.10.0 이상)가 AID 의
 표준 자리에 주소를 적고 우리 바인딩 IRI 로 인터페이스를 표시합니다. 코드에는 읽는 프레임(S7 Read Var, MC Batch Read)만
@@ -80,6 +81,18 @@ S7 · MC 는 **읽기만 하는 VEXPLOR 확장 바인딩**입니다. AID 1.1 에
 PLC 실측은 아직 없습니다.** S7-1200 / 1500 은 CPU 에서 「PUT/GET 통신 허용」을 켜고, 읽을 DB 마다 「최적화된 블록 액세스」를
 끕니다. 이전 버전(1.1.0 이하) 수집기는 S7 · MC 인터페이스를 받으면 읽지 않고, 상태 보고에 이유
 (`S7 is not read by this edge yet`)를 적어 보냅니다. 다른 설비는 계속 읽습니다.
+
+XGT 도 같은 VEXPLOR 확장입니다. LS ELECTRIC 이 공개한 「XGT FEnet I/F 모듈 사용 설명서」(V2.30, 8장)대로 만들고 그대로 만든
+시험용 서버로 시험했으며, 코드에는 읽기 요청(명령어 0x0054)만 있습니다. 읽을 목록은 AAS Studio 2.11.0 이상이 만듭니다.
+XG5000 에서 FEnet 모듈의 드라이버를 **XGT 서버**(TCP 2004)로 두고, 호스트 테이블을 켰다면 이 PC 의 주소를 넣습니다
+([사용법 3-3절](docs/사용법.md)).
+가장 큰 미확인은 워드 순서입니다. 설명서에는 여러 워드에 걸친 값(DINT · REAL · LREAL 등)의 워드 순서가 없어, 수집기는 하위 워드
+먼저로 읽습니다. INT · BOOL 은 맞는데 REAL · DINT 만 틀리면 이 때문입니다. 설명서로 정해지지 않은 것 전체는 AAS Studio 사용법
+8절(XGT)에 있습니다.
+
+**실기 확인: 사용자 보고 기다림.** S7 · MC · XGT 는 실물 PLC 없이 만들었습니다. 읽어 보셨다면
+[PLC 실기 확인 보고 서식](https://github.com/waceinc/vexplor-edge/issues/new?template=field_report.md)으로 알려 주십시오 — 제조사 · 계열 · CPU · 펌웨어 · 주소 · 기대한 값과 읽은 값(못 읽었으면 그
+이유)을 적으면 됩니다.
 
 ## 설치
 
@@ -117,6 +130,7 @@ npm run pack:release                         # Linux x64 · arm64 · Windows x64
 
 | VEXPLOR Edge | 규격 | 받는 서버 | 바뀐 것 |
 |---|---|---|---|
+| 1.3.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 이상(XGT 는 2.11.0 이상) | **LS ELECTRIC XGT 읽기**(FEnet 모듈을 단 XGK · XGI · XGR · XGB, TCP 2004 의 XGT 전용 프로토콜) — 읽기만 하며, AAS Studio 2.11.0 이상이 쓰는 VEXPLOR 확장 바인딩입니다. LS ELECTRIC 이 공개한 FEnet 사용 설명서대로 만들고 시험용 서버로 시험했으며 실제 PLC 확인은 아직 없습니다([통신 규약](#통신-규약)). S7 · MC · XGT 의 실제 PLC 결과를 받는 [PLC 실기 확인 보고](https://github.com/waceinc/vexplor-edge/issues/new?template=field_report.md) 이슈 서식을 더했습니다 |
 | 1.2.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 이상(S7 · MC 는 2.10.0 이상, 연결 화면의 Windows 탭은 2.10.0) | **Windows x64**: zip 패키지, Windows 서비스 `vexplor-edge`(WinSW — LocalService 계정, 지연 자동 시작, 멈추면 다시 시작), 한 줄 설치 `get.ps1`([설치 — Windows](docs/설치.md#windows)). **S7 · MC 읽기** — 읽기만 하며, AAS Studio 2.10.0 이상이 쓰는 VEXPLOR 확장 바인딩입니다. 시험용 서버로 시험했고 실제 PLC 실측은 아직 없습니다([통신 규약](#통신-규약)). 백신 · 색인기가 대기열 파일을 잠깐 잡아도 보내기가 끊기지 않고, 바이트 순서 표시(BOM)가 붙은 설정 파일도 읽습니다 |
 | 1.1.0 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 이상(원클릭 화면은 2.7.0, 상태 화면 · MQTT 로그인은 2.8.0 이상) | 묶음 상태에 공장 PC(CPU · 메모리 · 디스크 · 켜진 시간 · 서버와의 시계 차이), 서버 통신(마지막 성공 · 실패 이유 · 왕복 시간 · 가장 오래된 대기 묶음), 설비 응답(응답 시간 · 읽기 성공률 · 재연결 횟수 · 끊긴 시각)을 더해 보냅니다. 새 값을 모르는 서버도 묶음을 그대로 받습니다([사용법 8-1절](docs/사용법.md#8-1-pc--통신--설비-응답-상태-수집기-110-부터)). MQTT 브로커 로그인을 공장 PC 의 `credentials.json` 에서 읽습니다(AAS Studio 2.8.0 의 「로그인 필요」). 디스크가 가득 차도 수집기가 멈추지 않습니다 |
 | 1.0.1 | `vexplor.edge/1` | VEXPLOR AAS Studio 2.3.0 이상(원클릭 화면은 2.7.0 이상) | 끊긴 설비 연결(PLC · MQTT 브로커 재시작, 늦게 켜진 PLC)을 저절로 다시 엽니다. 연결 오류가 상태 화면에 그대로 보입니다([사용법 3-9절](docs/사용법.md#3-9-알아-둘-것)) |
