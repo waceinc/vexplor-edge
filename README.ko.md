@@ -2,6 +2,8 @@
 
 # VEXPLOR Edge
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23485164.svg)](https://doi.org/10.5281/zenodo.23485164)
+
 **공장 PC 한 대에 두는 원격 수집기. 사람이 승인한 목록의 설비 값만 읽어 HTTPS로 밖으로만 보냅니다.**
 공장으로 들어오는 연결도, 원격 정지도, PLC에 쓰는 기능도 없습니다.
 
