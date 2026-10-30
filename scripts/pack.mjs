@@ -37,7 +37,7 @@ import { rolldown } from 'rolldown';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUT = join(ROOT, 'out');
 const CACHE = join(OUT, 'cache');
-const NODE_VERSION = 'v24.21.0'; // Node 24 LTS, the newest patch at least two weeks old when chosen (2026-10-16)
+const NODE_VERSION = 'v24.22.1'; // Node 24 LTS. Normally the newest patch at least two weeks old; 24.22.1 is taken at once because it is a security release (2026-10-30)
 const WINSW = { url: 'https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe', sha256: '05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da' };
 const SEA_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
 /** Packages whose package.json names no license, read from their own files (2026-10-16) */
