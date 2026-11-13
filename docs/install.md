@@ -180,4 +180,3 @@ Revoke the device on the server as well.
   unit tests, the package built, and every service check `[OK]` (registered once, running as LocalService, delayed
   automatic start, restart on failure, no byte order mark, key and queue closed to Users, a batch sent, log written,
   started again after a kill, stopped with no program left, upgrade kept the registration, removed with `-Purge`).
-  Not yet installed on a factory PC.

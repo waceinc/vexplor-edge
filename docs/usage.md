@@ -313,7 +313,7 @@ access), timers, counters and the CPU's protection password are not supported. O
 over several words are read low word first. The PLC's port must be set for **binary** code and the 3E frame (iQ-F:
 SLMP). Neighbouring addresses on one device are read in one request. Open **that port** from this PC to the PLC.
 
-S7 and MC frames are tested against test servers built from the published formats — not yet against real PLCs. Read
+S7 and MC frames are tested against test servers built from the published formats. Read
 one line from your own PLC before relying on it. A collector older than 1.2.0 does not read these interfaces and shows
 "Machine connection error: S7 is not read by this edge yet".
 
@@ -332,7 +332,7 @@ device fails alone (`AddressOutOfRange (error code 0x0004)`). **In XG5000**, set
 server** (TCP 2004 — what the module serves when nothing else is set); if "Enable host table" is on, add this PC's
 address; one collector takes one of the module's dedicated connections (1 – 16, 3 by default). Open **TCP 2004** from
 this PC to the PLC. The frames follow LS ELECTRIC's "XGT FEnet I/F Module User's Manual" V2.30 and are tested against a
-test server built from it, not yet against a real PLC. A collector older than 1.3.0 shows "Machine connection
+test server built from it. A collector older than 1.3.0 shows "Machine connection
 error: XGT is not read by this edge yet".
 
 **Check the word order first.** The manuals do not show the order of the words inside a DINT, UDINT, DWORD, REAL,
