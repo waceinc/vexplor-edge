@@ -25,4 +25,4 @@ Only the latest version receives security fixes. Please upgrade older versions.
   notice source).
 - It reads only what a person approved on the server and never writes to a device.
 - Every request carries an Ed25519 signature made with a key that is created on the PC and never leaves it.
-- Packages are checked against `SHA256SUMS` by `get.sh` before anything runs; the Windows package is not offered yet.
+- Packages are checked against `SHA256SUMS` by `get.sh` and `get.ps1` before anything runs.
