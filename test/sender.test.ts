@@ -37,7 +37,10 @@ function slowServer(sent: number[]) {
 
 describe('edge queue order and retention', () => {
   it('sends oldest first and never two at once, even when flushes overlap', async () => {
-    const queue = new DiskQueue(mkdtempSync(join(tmpdir(), 'edge-order-')), 1000);
+    // The clock is the batches' own day: on the real clock they turn older than the 30-day limit and are dropped
+    // before sending (this test began failing on 2026-11-15, a month after the dates below)
+    const now = Date.parse('2026-10-16T00:00:10.000Z');
+    const queue = new DiskQueue(mkdtempSync(join(tmpdir(), 'edge-order-')), 1000, 30, () => now);
     for (let seq = 1; seq <= 5; seq += 1) queue.add(batch(seq, `2026-10-16T00:00:0${seq}.000Z`));
     const sent: number[] = [];
     const server = slowServer(sent);
