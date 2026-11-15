@@ -6,7 +6,9 @@
  *     npm run build && node scripts/pack.mjs --windows   # + vexplor-edge-<version>-win-x64.zip + get.ps1 (1.2.0)
  *     npm run build && node scripts/pack.mjs --windows --no-linux   # Windows only — what a Windows machine can build
  *
- * 1. rolldown bundles dist/bin.js and everything it imports into one CommonJS file.
+ * 1. rolldown bundles dist/bin.js and everything it imports into one CommonJS file, with the rewrites in
+ *    scripts/bundle-fixes.mjs. The same bundle of scripts/opcua-smoke.mjs then reads an OPC UA server from an empty
+ *    folder; the package is refused when it fails (2026-11-16 — a dependency that reads its own files at start-up).
  * 2. The packages that actually went into the bundle become THIRD-PARTY-NOTICES.txt and a CycloneDX SBOM — the list is
  *    what was bundled, not what package.json declares.
  * 3. Node.js single executable (SEA): a blob made with the same Node version as the targets, injected with postject into
@@ -24,14 +26,18 @@
  * Important: WinSW publishes no digest for v2.12.0; the hash below was taken at its first download (2026-10-16) and is
  *    the one every later build must match.
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { unzipSync, zipSync } from 'fflate';
 import { rolldown } from 'rolldown';
+
+import { bundleFixes } from './bundle-fixes.mjs';
 
 // fileURLToPath, not URL.pathname — on Windows the pathname is /D:/… and would not resolve
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -60,13 +66,22 @@ async function download(url, file) {
   return file;
 }
 
-/** Bundles the edge and returns the bundled third-party packages */
-async function bundle(file) {
-  if (!existsSync(join(ROOT, 'dist/bin.js'))) fail('dist is missing — run npm run build first');
-  const build = await rolldown({ input: join(ROOT, 'dist/bin.js'), platform: 'node', external: (id) => id.startsWith('node:'), logLevel: 'silent', treeshake: true });
+/** Bundles one entry into one CommonJS file with the bundle fixes; returns rolldown's output chunk */
+async function bundleFile(input, file) {
+  const fixes = bundleFixes();
+  const build = await rolldown({ input, platform: 'node', external: (id) => id.startsWith('node:'), logLevel: 'silent', treeshake: true, plugins: [fixes.plugin] });
   const { output } = await build.generate({ format: 'cjs', codeSplitting: false });
   await build.close();
   writeFileSync(file, output[0].code);
+  return { chunk: output[0], applied: fixes.applied };
+}
+
+/** Bundles the edge and returns the bundled third-party packages */
+async function bundle(file) {
+  if (!existsSync(join(ROOT, 'dist/bin.js'))) fail('dist is missing — run npm run build first');
+  const { chunk, applied } = await bundleFile(join(ROOT, 'dist/bin.js'), file);
+  const output = [chunk];
+  if (applied.length > 0) process.stdout.write(`[OK] bundle fixes: ${applied.join(', ')}\n`);
   const packages = new Map();
   for (const id of Object.keys(output[0].modules)) {
     const at = id.lastIndexOf('node_modules/');
@@ -153,11 +168,64 @@ mkdirSync(CACHE, { recursive: true });
 const bundled = join(OUT, 'build/vexplor-edge.cjs');
 const packages = await bundle(bundled);
 
+/** A free TCP port on this machine */
+const freePort = () =>
+  new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address();
+      probe.close(() => resolve(port));
+    });
+  });
+
+/**
+ * The bundled OPC UA reader must read from a folder that holds nothing but the bundle — as on the factory PC. A source
+ * test cannot see this: there node_modules is always next to the code.
+ */
+async function checkBundledOpcUa(node) {
+  const empty = mkdtempSync(join(tmpdir(), 'vexplor-edge-smoke-'));
+  const smoke = join(empty, 'opcua-smoke.cjs');
+  await bundleFile(join(ROOT, 'scripts/opcua-smoke.mjs'), smoke);
+  let failure = '';
+  const server = spawn(process.execPath, [join(ROOT, 'scripts/opcua-smoke-server.mjs'), String(await freePort())], { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
+  try {
+    const port = await new Promise((resolve, reject) => {
+      let seen = '';
+      const timer = setTimeout(() => reject(new Error('the OPC UA check server did not start in 60 s')), 60_000);
+      server.stdout.on('data', (data) => {
+        seen += data;
+        const ready = /ready (\d+)/.exec(seen);
+        if (ready) {
+          clearTimeout(timer);
+          resolve(Number(ready[1]));
+        }
+      });
+      server.once('exit', (code) => reject(new Error(`the OPC UA check server exited (${code})`)));
+    });
+    try {
+      execFileSync(node, [smoke, `opc.tcp://127.0.0.1:${port}`], { cwd: empty, stdio: ['ignore', 'ignore', 'pipe'], timeout: 60_000 });
+    } catch (error) {
+      failure = `the bundled collector cannot read OPC UA from an empty folder — a bundled package reads its own files (scripts/bundle-fixes.mjs):\n${error.stderr ?? error.message}`;
+    }
+  } catch (error) {
+    failure = error.message;
+  } finally {
+    // Before fail(): process.exit would leave the server running and holding this script's output open
+    server.kill('SIGKILL');
+    rmSync(empty, { recursive: true, force: true });
+  }
+  if (failure) fail(failure);
+  process.stdout.write('[OK] bundled OPC UA reader read a server from an empty folder\n');
+}
+
 const sumsFile = await download(`https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt`, join(CACHE, `SHASUMS256-${NODE_VERSION}.txt`));
 const sums = new Map(readFileSync(sumsFile, 'utf8').trim().split('\n').map((line) => line.split(/\s+/).reverse()));
 // Node's download names: linux-x64, darwin-arm64, win-x64
 const hostPlatform = `${process.platform === 'win32' ? 'win' : process.platform}-${process.arch}`;
 const hostNode = await nodeBinary(hostPlatform, sums);
+// With the Node version the packages carry
+await checkBundledOpcUa(hostNode);
 
 // The SEA blob is made by the very Node version that runs it
 const blob = join(OUT, 'build/sea-prep.blob');
