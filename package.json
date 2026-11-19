@@ -47,6 +47,6 @@
     "vitest": "^4.1.11"
   },
   "overrides": {
-    "node-opcua": "2.178.0"
+    "node-opcua": "2.187.31"
   }
 }

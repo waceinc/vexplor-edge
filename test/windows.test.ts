@@ -64,11 +64,14 @@ const batch = (seq: number): Batch => ({
 });
 
 const queueDir = () => mkdtempSync(join(tmpdir(), 'edge-win-'));
+// The clock is the batches' own day: on the real clock they turn older than the 30-day limit and are dropped
+// (these tests began failing on 2026-11-19, a month after the dates above — as the queue-order test did on 2026-11-15)
+const now = (): number => Date.parse('2026-10-20T00:01:00.000Z');
 
 describe('a file held open for a moment (antivirus, indexer)', () => {
   it('writes the batch to disk once the rename goes through on a retry', () => {
     const dir = queueDir();
-    const queue = new DiskQueue(dir, 100);
+    const queue = new DiskQueue(dir, 100, 30, now);
     locks.rename = 2;
     queue.add(batch(1));
     expect(queue.inMemory).toBe(0);
@@ -77,7 +80,7 @@ describe('a file held open for a moment (antivirus, indexer)', () => {
 
   for (const code of ['EBUSY', 'EACCES']) {
     it(`retries ${code} like EPERM`, () => {
-      const queue = new DiskQueue(queueDir(), 100);
+      const queue = new DiskQueue(queueDir(), 100, 30, now);
       locks.code = code;
       locks.rename = 1;
       queue.add(batch(1));
@@ -86,7 +89,7 @@ describe('a file held open for a moment (antivirus, indexer)', () => {
   }
 
   it('keeps the batch in memory — and does not throw — when the rename and the clean-up both keep failing', () => {
-    const queue = new DiskQueue(queueDir(), 100, 30, Date.now, { log: () => undefined });
+    const queue = new DiskQueue(queueDir(), 100, 30, now, { log: () => undefined });
     locks.rename = 1000;
     locks.remove = 1000;
     expect(() => queue.add(batch(1))).not.toThrow();
@@ -96,7 +99,7 @@ describe('a file held open for a moment (antivirus, indexer)', () => {
 
   it('a sent batch whose file is held is not sent again, and is deleted once the file is free', () => {
     const dir = queueDir();
-    const queue = new DiskQueue(dir, 100);
+    const queue = new DiskQueue(dir, 100, 30, now);
     queue.add(batch(1));
     queue.add(batch(2));
     const [first] = queue.files();
@@ -111,7 +114,7 @@ describe('a file held open for a moment (antivirus, indexer)', () => {
 
   it('a refused batch whose file is held moves to refused/ on a retry', () => {
     const dir = queueDir();
-    const queue = new DiskQueue(dir, 100);
+    const queue = new DiskQueue(dir, 100, 30, now);
     queue.add(batch(1));
     const [name] = queue.files();
     locks.rename = 2;
@@ -121,7 +124,7 @@ describe('a file held open for a moment (antivirus, indexer)', () => {
 
   it('a refused batch whose file stays held is kept in refused/ and not offered again', () => {
     const dir = queueDir();
-    const queue = new DiskQueue(dir, 100);
+    const queue = new DiskQueue(dir, 100, 30, now);
     queue.add(batch(1));
     const [name] = queue.files();
     locks.rename = 1000;
@@ -132,7 +135,7 @@ describe('a file held open for a moment (antivirus, indexer)', () => {
   });
 
   it('dropping the oldest batches beyond the bound does not throw while a file is held', () => {
-    const queue = new DiskQueue(queueDir(), 1);
+    const queue = new DiskQueue(queueDir(), 1, 30, now);
     queue.add(batch(1));
     locks.remove = 1000;
     expect(() => queue.add(batch(2))).not.toThrow();
